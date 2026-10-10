@@ -1,0 +1,382 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+<meta charset="utf-8">
+<title>TÀI LIỆU ÔN TẬP VÀ VẤN ĐÁP TUẦN 1 - HỆ THỐNG ĐẶT VÉ XEM PHIM</title>
+<style>
+    body {
+        font-family: 'Times New Roman', Times, serif;
+        font-size: 13pt;
+        line-height: 1.5;
+        color: #1a1a1a;
+        margin: 40px;
+    }
+    h1 {
+        font-size: 20pt;
+        color: #0d47a1;
+        text-align: center;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+    }
+    .subtitle {
+        text-align: center;
+        font-size: 13pt;
+        font-style: italic;
+        color: #455a64;
+        margin-bottom: 25px;
+    }
+    .info-box {
+        border: 1px solid #90caf9;
+        background-color: #e3f2fd;
+        padding: 15px;
+        border-radius: 6px;
+        margin-bottom: 30px;
+    }
+    h2 {
+        font-size: 15pt;
+        color: #1565c0;
+        border-bottom: 2px solid #1565c0;
+        padding-bottom: 4px;
+        margin-top: 25px;
+    }
+    h3 {
+        font-size: 13pt;
+        color: #2e7d32;
+        margin-top: 15px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 15px 0;
+    }
+    th, td {
+        border: 1px solid #b0bec5;
+        padding: 8px 12px;
+        text-align: left;
+    }
+    th {
+        background-color: #eceff1;
+        font-weight: bold;
+        color: #263238;
+    }
+    code {
+        font-family: 'Consolas', 'Courier New', monospace;
+        background-color: #f5f5f5;
+        padding: 2px 5px;
+        border-radius: 3px;
+        font-size: 11.5pt;
+        color: #c2185b;
+    }
+    pre {
+        background-color: #263238;
+        color: #eceff1;
+        padding: 12px;
+        border-radius: 6px;
+        font-family: 'Consolas', monospace;
+        font-size: 11pt;
+        overflow-x: auto;
+    }
+    .qa-box {
+        background-color: #fafafa;
+        border-left: 5px solid #ff9800;
+        padding: 12px 18px;
+        margin: 15px 0;
+    }
+    .qa-q {
+        font-weight: bold;
+        color: #e65100;
+        font-size: 13pt;
+        margin-bottom: 6px;
+    }
+    .qa-a {
+        color: #212121;
+    }
+    .highlight {
+        background-color: #fff9c4;
+        padding: 2px 4px;
+        font-weight: bold;
+    }
+</style>
+</head>
+<body>
+
+<h1>TÀI LIỆU ÔN TẬP & BẢO VỆ TIẾN ĐỘ TUẦN 1</h1>
+<div class="subtitle">Hệ Thống Đặt Vé Xem Phim Trực Tuyến (Cinema Booking System)</div>
+
+<div class="info-box">
+    <b>Họ và tên sinh viên:</b> Nguyễn Thành Nhân<br>
+    <b>Mã số sinh viên (MSSV):</b> 2124110299<br>
+    <b>Công nghệ sử dụng:</b> Java 21, Spring Boot 4.x, Spring Data JPA, Hibernate ORM, MySQL 8.x, Lombok, Jakarta Validation, Swagger UI<br>
+    <b>Mục đích tài liệu:</b> Tổng hợp toàn bộ kiến thức lý thuyết, phân tích mã nguồn và ngân hàng câu hỏi vấn đáp phục vụ buổi báo cáo tiến độ Tuần 1 với Giảng viên hướng dẫn.
+</div>
+
+<h2>PHẦN 1: MÔ HÌNH KIẾN TRÚC MVC & CÁC TẦNG TRONG DỰ ÁN</h2>
+
+<h3>1.1. Luồng xử lý một Request trong kiến trúc Spring Boot MVC</h3>
+<p>Dự án tuân thủ nghiêm ngặt mô hình phân tầng chuẩn công nghiệp (Layered Architecture):</p>
+<pre>
+Client (Postman / Browser)
+         │  (HTTP Request JSON)
+         ▼
+[Controller]  ➔ Nhận Request, Validate dữ liệu (@Valid), gọi Service
+         │
+         ▼
+ [Service]   ➔ Thực thi logic nghiệp vụ (Kiểm tra trùng lặp, tính toán, transactional)
+         │
+         ▼
+[Repository] ➔ Giao tiếp với MySQL Database thông qua Spring Data JPA
+         │
+         ▼
+  [Entity]   ➔ Ánh xạ trực tiếp với bảng trong cơ sở dữ liệu
+</pre>
+
+<h3>1.2. Vai trò của từng Package trong mã nguồn</h3>
+<table>
+    <tr>
+        <th style="width: 20%;">Package</th>
+        <th style="width: 30%;">Ví dụ trong dự án</th>
+        <th>Vai trò & Ý nghĩa</th>
+    </tr>
+    <tr>
+        <td><code>controller</code></td>
+        <td><code>MovieController</code>, <code>CinemaController</code></td>
+        <td>Tiếp nhận HTTP Request từ client, điều hướng và trả về <code>ResponseEntity&lt;ApiResponse&lt;T&gt;&gt;</code>. Không chứa logic nghiệp vụ.</td>
+    </tr>
+    <tr>
+        <td><code>service</code></td>
+        <td><code>MovieService</code>, <code>CinemaService</code></td>
+        <td>Khai báo các <b>Interface</b> định nghĩa các chức năng nghiệp vụ của hệ thống (hợp đồng nghiệp vụ).</td>
+    </tr>
+    <tr>
+        <td><code>service.impl</code></td>
+        <td><code>MovieServiceImpl</code>, <code>CinemaServiceImpl</code></td>
+        <td>Hiện thực hóa (implements) các Interface. Đây là nơi chứa 100% logic xử lý, kiểm tra hợp lệ, quản lý transaction với <code>@Transactional</code>.</td>
+    </tr>
+    <tr>
+        <td><code>repository</code></td>
+        <td><code>MovieRepository</code>, <code>CinemaRepository</code></td>
+        <td>Kế thừa <code>JpaRepository&lt;T, ID&gt;</code>, cung cấp các hàm CRUD có sẵn (save, findById, findAll, delete) và custom query bằng JPQL.</td>
+    </tr>
+    <tr>
+        <td><code>entity</code></td>
+        <td><code>Movie</code>, <code>Cinema</code>, <code>Seat</code>, <code>User</code></td>
+        <td>Các lớp đối tượng ánh xạ trực tiếp 1-1 với các bảng trong MySQL thông qua Hibernate ORM.</td>
+    </tr>
+    <tr>
+        <td><code>dto</code></td>
+        <td><code>MovieRequestDTO</code>, <code>MovieResponseDTO</code></td>
+        <td>Data Transfer Object: Đóng gói dữ liệu gửi lên từ client và dữ liệu trả về. Giúp ẩn các thông tin nhạy cảm của Entity và hỗ trợ Validation.</td>
+    </tr>
+    <tr>
+        <td><code>mapper</code></td>
+        <td><code>MovieMapper</code>, <code>CinemaMapper</code></td>
+        <td>Chuyển đổi qua lại giữa Entity và DTO để dữ liệu được đóng gói an toàn trước khi ra ngoài controller.</td>
+    </tr>
+    <tr>
+        <td><code>exception</code></td>
+        <td><code>GlobalExceptionHandler</code>, <code>ResourceNotFoundException</code></td>
+        <td>Bắt mọi lỗi ngoại lệ trong hệ thống và chuẩn hóa về mã lỗi HTTP chuẩn (400, 404, 409, 500).</td>
+    </tr>
+    <tr>
+        <td><code>seeder</code></td>
+        <td><code>DataSeeder</code></td>
+        <td>Thực thi khi ứng dụng khởi động (implements <code>CommandLineRunner</code>), tự động chèn dữ liệu mẫu nếu DB trống.</td>
+    </tr>
+</table>
+
+---
+
+<h2>PHẦN 2: CƠ SỞ DỮ LIỆU & SPRING DATA JPA / HIBERNATE</h2>
+
+<h3>2.1. Bản chất của JPA và Hibernate</h3>
+<ul>
+    <li><b>JPA (Java Persistence API / Jakarta Persistence):</b> Là một <i>chuẩn đặc tả (Specification/Interface)</i> quy định cách thức ánh xạ đối tượng Java vào cơ sở dữ liệu quan hệ.</li>
+    <li><b>Hibernate:</b> Là <i>bộ cài đặt thực thi cụ thể (Implementation)</i> của chuẩn JPA. Spring Boot sử dụng Hibernate ngầm định bên dưới.</li>
+</ul>
+
+<h3>2.2. Các Annotation JPA quan trọng đã sử dụng</h3>
+<ul>
+    <li><code>@Entity</code> & <code>@Table(name = "...")</code>: Khai báo class là một thực thể quản lý bởi JPA và map với tên bảng cụ thể trong CSDL.</li>
+    <li><code>@Id</code> & <code>@GeneratedValue(strategy = GenerationType.IDENTITY)</code>: Khai báo khóa chính và dùng chiến lược Auto-Increment của MySQL.</li>
+    <li><code>@ManyToOne(fetch = FetchType.LAZY)</code> & <code>@JoinColumn(name = "...")</code>: Ánh xạ quan hệ n-1 (ví dụ nhiều Phòng thuộc 1 Rạp). <b>FetchType.LAZY</b> giúp chỉ truy vấn khi cần, tiết kiệm bộ nhớ và tránh truy vấn dư thừa.</li>
+    <li><code>@OneToMany(mappedBy = "...", cascade = CascadeType.ALL, orphanRemoval = true)</code>: Ánh xạ quan hệ 1-n (1 Rạp có nhiều Phòng).</li>
+    <li><code>@CreationTimestamp</code> & <code>@UpdateTimestamp</code>: Tự động ghi lại thời gian tạo bản ghi và thời gian cập nhật bản ghi gần nhất.</li>
+</ul>
+
+<h3>2.3. So sánh JPA vs JDBC (Khi nào nên kết hợp?)</h3>
+<table>
+    <tr>
+        <th>Tiêu chí</th>
+        <th>Spring Data JPA (Hibernate)</th>
+        <th>Spring JDBC (JdbcTemplate)</th>
+    </tr>
+    <tr>
+        <td><b>Cách tiếp cận</b></td>
+        <td>Hướng đối tượng (OOP), tự động sinh SQL</td>
+        <td>Thao tác trực tiếp với SQL thuần (Native SQL)</td>
+    </tr>
+    <tr>
+        <td><b>Thế mạnh</b></td>
+        <td>CRUD cơ bản cực nhanh, quản lý quan hệ bảng tự động, tự động sinh DDL.</td>
+        <td>Tốc độ thực thi cực đại, kiểm soát 100% câu SQL, tối ưu chỉ mục (Index).</td>
+    </tr>
+    <tr>
+        <td><b>Điểm yếu</b></td>
+        <td>Thao tác hàng loạt (Batch Insert) chậm, báo cáo GROUP BY phức tạp cồng kềnh.</td>
+        <td>Phải viết SQL thủ công bằng tay, tự map dữ liệu.</td>
+    </tr>
+    <tr>
+        <td><b>Ứng dụng trong dự án</b></td>
+        <td><b>Tuần 1:</b> Dùng cho 100% CRUD Master data (Phim, Rạp, Phòng chiếu, Thể loại).</td>
+        <td><b>Tuần 2 & Tuần 4:</b> Dùng JDBC cho Batch Insert sinh 150-300 ghế một lượt và truy vấn báo cáo doanh thu.</td>
+    </tr>
+</table>
+
+---
+
+<h2>PHẦN 3: XỬ LÝ NGOẠI LỆ & CHUẨN HÓA DỮ LIỆU ĐẦU RA</h2>
+
+<h3>3.1. Cấu trúc chuẩn của <code>ApiResponse&lt;T&gt;</code></h3>
+<p>Mọi API trong hệ thống đều trả về cấu trúc thống nhất:</p>
+<pre>
+{
+  "status": 200,                    // Mã trạng thái HTTP (200, 201, 400, 404, 409, 500)
+  "message": "Thông báo kết quả",   // Thông báo cho lập trình viên FE hoặc người dùng
+  "data": { ... },                  // Dữ liệu trả về (Object, List hoặc Map)
+  "timestamp": "2026-10-09T15:50:01"// Thời điểm trả về
+}
+</pre>
+
+<h3>3.2. Cơ chế bắt lỗi tập trung (Global Exception Handling)</h3>
+<p>Sử dụng <code>@RestControllerAdvice</code> kết hợp <code>@ExceptionHandler</code> để chặn tất cả Exception từ Service đẩy ra:</p>
+<ul>
+    <li><code>ResourceNotFoundException</code> ➔ Trả về mã <b>404 NOT_FOUND</b> khi không tìm thấy ID (Ví dụ: Phim không tồn tại).</li>
+    <li><code>DuplicateResourceException</code> ➔ Trả về mã <b>409 CONFLICT</b> khi dữ liệu bị trùng khóa duy nhất (Ví dụ: Tên rạp hoặc Tên thể loại đã tồn tại).</li>
+    <li><code>MethodArgumentNotValidException</code> ➔ Trả về mã <b>400 BAD_REQUEST</b> khi dữ liệu vi phạm Bean Validation (Ví dụ: Để trống tên phim, thời lượng âm).</li>
+    <li><code>Exception.class</code> ➔ Trả về mã <b>500 INTERNAL_SERVER_ERROR</b> khi xảy ra sự cố bất ngờ của hệ thống.</li>
+</ul>
+
+---
+
+<h2>PHẦN 4: NGÂN HÀNG CÂU HỎI VẤN ĐÁP THỰC TẾ & CÂU TRẢ LỜI MẪU</h2>
+
+<div class="qa-box">
+    <div class="qa-q">Câu 1: Em hãy giải thích luồng hoạt động từ lúc Client gửi request lấy danh sách phim đang chiếu GET /api/v1/movies/now-showing?</div>
+    <div class="qa-a">
+        <b>Trả lời:</b>
+        <ol>
+            <li>Client gửi HTTP GET đến <code>/api/v1/movies/now-showing</code>.</li>
+            <li><code>DispatcherServlet</code> của Spring Boot tiếp nhận và phân phối đến <code>MovieController.getNowShowingMovies()</code>.</li>
+            <li>Controller gọi tiếp sang <code>MovieService.getNowShowingMovies()</code> (được thực thi bởi <code>MovieServiceImpl</code>).</li>
+            <li>Trong tầng Service, hàm gọi <code>movieRepository.findByStatus("now_showing")</code>.</li>
+            <li>Hibernate sinh câu lệnh SQL: <code>SELECT ... FROM movies WHERE status = 'now_showing'</code> và lấy dữ liệu từ MySQL.</li>
+            <li>Service dùng <code>MovieMapper.toResponseDTO()</code> để chuyển đổi danh sách <code>Movie</code> Entity thành <code>MovieResponseDTO</code> (kèm danh sách thể loại).</li>
+            <li>Controller bọc dữ liệu vào <code>ApiResponse.success(data, message)</code> và trả về Client dưới dạng JSON với HTTP Status 200 OK.</li>
+        </ol>
+    </div>
+</div>
+
+<div class="qa-box">
+    <div class="qa-q">Câu 2: Tại sao em lại tách riêng Interface Service và Class ServiceImpl trong package impl?</div>
+    <div class="qa-a">
+        <b>Trả lời:</b>
+        <ul>
+            <li><b>Tuân thủ nguyên lý thiết kế SOLID:</b> Cụ thể là <i>Dependency Inversion Principle (DIP)</i> - các module cấp cao (Controller) không nên phụ thuộc trực tiếp vào module cấp thấp mà nên phụ thuộc vào abstraction (Interface).</li>
+            <li><b>Loose Coupling (Giảm sự phụ thuộc chặt chẽ):</b> Giúp Controller chỉ quan tâm Service làm được gì (hợp đồng nghiệp vụ), không quan tâm chi tiết bên trong được viết như thế nào.</li>
+            <li><b>Dễ dàng Unit Test:</b> Cho phép giả lập (Mocking) Service một cách dễ dàng khi viết kiểm thử tự động với Mockito.</li>
+            <li><b>Hỗ trợ đa cài đặt:</b> Sau này nếu cần đổi cách xử lý (ví dụ đổi từ JPA sang JDBC hoặc Microservices), chỉ cần tạo class Impl mới mà không làm thay đổi Controller.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="qa-box">
+    <div class="qa-q">Câu 3: Tại sao em dùng DTO mà không trả trực tiếp JPA Entity ra ngoài Controller?</div>
+    <div class="qa-a">
+        <b>Trả lời:</b> Có 4 lý do quan trọng:
+        <ol>
+            <li><b>Bảo mật (Security):</b> Tránh để lộ các trường nhạy cảm của CSDL ra bên ngoài (ví dụ như trường <code>password_hash</code> trong bảng <code>User</code>).</li>
+            <li><b>Tránh lỗi vòng lặp tuần hoàn (Infinite Recursion):</b> Trong JPA có quan hệ 2 chiều (ví dụ: Cinema chứa danh sách Rooms, Room lại chứa Cinema). Nếu serialize thẳng Entity thành JSON sẽ bị vòng lặp vô tận gây lỗi <code>StackOverflowError</code>.</li>
+            <li><b>Tối ưu dữ liệu mạng:</b> Chỉ truyền đúng những trường Client cần, không truyền thừa dữ liệu.</li>
+            <li><b>Hỗ trợ Validation:</b> Tách biệt giữa dữ liệu nhập vào (Request DTO) cần kiểm tra tính hợp lệ và dữ liệu trả về (Response DTO).</li>
+        </ol>
+    </div>
+</div>
+
+<div class="qa-box">
+    <div class="qa-q">Câu 4: Lỗi N+1 Query trong JPA là gì và em đã giải quyết như thế nào trong dự án?</div>
+    <div class="qa-a">
+        <b>Trả lời:</b>
+        <ul>
+            <li><b>Hiện tượng:</b> Khi truy vấn danh sách N bộ phim, nếu cấu hình quan hệ là <code>EAGER</code> hoặc duyệt qua từng phim để lấy thể loại, Hibernate sẽ thực thi 1 câu lệnh lấy N phim và thêm N câu lệnh lấy thể loại cho từng phim ➔ Tổng cộng là <b>N + 1 câu lệnh SQL</b>, gây sụt giảm nghiêm trọng hiệu năng cơ sở dữ liệu.</li>
+            <li><b>Cách giải quyết:</b> Em đã cấu hình toàn bộ quan hệ <code>@ManyToOne</code> và <code>@OneToMany</code> sang chế độ <code>FetchType.LAZY</code>. Ở những nơi cần lấy thông tin kèm theo, em sử dụng DTO Mapper có kiểm soát hoặc viết custom query JOIN FETCH để lấy dữ liệu trong 1 lần truy vấn duy nhất.</li>
+        </ul>
+    </div>
+</div>
+
+<div class="qa-box">
+    <div class="qa-q">Câu 5: Dữ liệu mẫu (Data Seeder) được khởi tạo như thế nào trong dự án?</div>
+    <div class="qa-a">
+        <b>Trả lời:</b>
+        Em xây dựng class <code>DataSeeder</code> thực thi interface <code>CommandLineRunner</code>. Khi ứng dụng Spring Boot khởi động hoàn tất, phương thức <code>run()</code> sẽ tự động được kích hoạt. Lớp này kiểm tra nếu trong bảng <code>genres</code> chưa có dữ liệu (<code>genreRepository.count() == 0</code>) thì mới chèn 8 thể loại, 4 bộ phim, 3 rạp chiếu, phòng chiếu, banner và ngày lễ. Nhờ vậy dữ liệu không bao giờ bị chèn lặp lại khi khởi động lại ứng dụng.
+    </div>
+</div>
+
+<div class="qa-box">
+    <div class="qa-q">Câu 6: Em đã test các API này như thế nào?</div>
+    <div class="qa-a">
+        <b>Trả lời:</b>
+        Em đã kiểm thử toàn diện bằng 2 công cụ:
+        <ol>
+            <li><b>Swagger UI (OpenAPI 3.0):</b> Truy cập tại <code>http://localhost:8080/swagger-ui/index.html</code> để xem trực quan tài liệu mô tả chi tiết của từng API và thực hiện tính năng "Try it out".</li>
+            <li><b>Postman:</b> Gửi các HTTP Request (GET, POST, PUT, DELETE) với các trường hợp dữ liệu hợp lệ (trả về 200, 201) và trường hợp dữ liệu vi phạm validation (trả về 400 Bad Request) để xác nhận hệ thống bắt lỗi chuẩn xác.</li>
+        </ol>
+    </div>
+</div>
+
+---
+
+<h2>PHẦN 5: BẢNG TỔNG KẾT MÃ LỖI HTTP STATUS CODE</h2>
+<table>
+    <tr>
+        <th>Mã HTTP</th>
+        <th>Ý nghĩa</th>
+        <th>Tình huống sử dụng trong hệ thống</th>
+    </tr>
+    <tr>
+        <td><code>200 OK</code></td>
+        <td>Thành công</td>
+        <td>Lấy dữ liệu (GET) hoặc cập nhật thành công (PUT).</td>
+    </tr>
+    <tr>
+        <td><code>201 Created</code></td>
+        <td>Đã tạo mới thành công</td>
+        <td>Thêm mới bản ghi vào CSDL (POST tạo phim, rạp, thể loại).</td>
+    </tr>
+    <tr>
+        <td><code>400 Bad Request</code></td>
+        <td>Dữ liệu gửi lên sai</td>
+        <td>Dữ liệu vi phạm Bean Validation (bị rỗng, sai định dạng số).</td>
+    </tr>
+    <tr>
+        <td><code>404 Not Found</code></td>
+        <td>Không tìm thấy tài nguyên</td>
+        <td>Truy vấn theo ID không tồn tại trong CSDL.</td>
+    </tr>
+    <tr>
+        <td><code>409 Conflict</code></td>
+        <td>Xung đột dữ liệu</td>
+        <td>Trùng lặp tên thể loại, tên rạp hoặc ngày lễ đã có trong CSDL.</td>
+    </tr>
+    <tr>
+        <td><code>500 Internal Server Error</code></td>
+        <td>Lỗi hệ thống máy chủ</td>
+        <td>Lỗi cú pháp SQL, mất kết nối database hoặc lỗi runtime chưa dự liệu.</td>
+    </tr>
+</table>
+
+<div style="margin-top: 40px; text-align: right; font-style: italic;">
+    TP. Hồ Chí Minh, Ngày 09 Tháng 10 Năm 2026<br>
+    <b>Sinh viên thực hiện:</b> Nguyễn Thành Nhân
+</div>
+
+</body>
+</html>
