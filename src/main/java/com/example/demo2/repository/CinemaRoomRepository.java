@@ -9,4 +9,6 @@ import java.util.List;
 @Repository
 public interface CinemaRoomRepository extends JpaRepository<CinemaRoom, Long> {
     List<CinemaRoom> findByCinemaId(Long cinemaId);
+
+    boolean existsByCinemaIdAndNameIgnoreCase(Long cinemaId, String name);
 }

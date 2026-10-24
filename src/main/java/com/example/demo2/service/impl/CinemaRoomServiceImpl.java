@@ -4,6 +4,7 @@ import com.example.demo2.dto.cinemaroom.CinemaRoomRequestDTO;
 import com.example.demo2.dto.cinemaroom.CinemaRoomResponseDTO;
 import com.example.demo2.entity.Cinema;
 import com.example.demo2.entity.CinemaRoom;
+import com.example.demo2.exception.DuplicateResourceException;
 import com.example.demo2.exception.ResourceNotFoundException;
 import com.example.demo2.mapper.CinemaRoomMapper;
 import com.example.demo2.repository.CinemaRepository;
@@ -29,6 +30,10 @@ public class CinemaRoomServiceImpl implements CinemaRoomService {
         Cinema cinema = cinemaRepository.findById(cinemaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Rạp chiếu", "id", cinemaId));
 
+        if (cinemaRoomRepository.existsByCinemaIdAndNameIgnoreCase(cinemaId, dto.getName().trim())) {
+            throw new DuplicateResourceException("Phòng chiếu tại rạp '" + cinema.getName() + "'", "name", dto.getName());
+        }
+
         CinemaRoom room = CinemaRoomMapper.toEntity(dto, cinema);
         return CinemaRoomMapper.toResponseDTO(cinemaRoomRepository.save(room));
     }
@@ -49,6 +54,11 @@ public class CinemaRoomServiceImpl implements CinemaRoomService {
     public CinemaRoomResponseDTO updateRoom(Long roomId, CinemaRoomRequestDTO dto) {
         CinemaRoom room = cinemaRoomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Phòng chiếu", "id", roomId));
+
+        if (!room.getName().equalsIgnoreCase(dto.getName().trim())
+                && cinemaRoomRepository.existsByCinemaIdAndNameIgnoreCase(room.getCinema().getId(), dto.getName().trim())) {
+            throw new DuplicateResourceException("Phòng chiếu tại rạp '" + room.getCinema().getName() + "'", "name", dto.getName());
+        }
 
         CinemaRoomMapper.updateEntity(room, dto);
         return CinemaRoomMapper.toResponseDTO(cinemaRoomRepository.save(room));

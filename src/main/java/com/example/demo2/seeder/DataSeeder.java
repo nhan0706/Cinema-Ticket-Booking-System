@@ -37,11 +37,20 @@ public class DataSeeder implements CommandLineRunner {
     private final TicketRepository ticketRepository;
     private final BookingRepository bookingRepository;
 
+    // Repositories cho Tuần 3
+    private final CouponRepository couponRepository;
+    private final BookingFnbRepository bookingFnbRepository;
+    private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
+    private final PaymentAttemptRepository paymentAttemptRepository;
+    private final RefundRepository refundRepository;
+    private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+
     @Override
     @Transactional
     public void run(String... args) {
         seedWeek1Data();
         seedWeek2Data();
+        seedWeek3Data();
     }
 
     private void seedWeek1Data() {
@@ -571,20 +580,22 @@ public class DataSeeder implements CommandLineRunner {
         List<Seat> roomSeats = seatRepository.findByCinemaRoomIdOrderByRowIndexAscColIndexAsc(firstShowtime.getCinemaRoom().getId());
         if (roomSeats.size() < 2) return;
 
-        Seat seat1 = roomSeats.get(14); // Ví dụ ghế B05
-        Seat seat2 = roomSeats.get(15); // Ví dụ ghế B06
+        Seat seat1 = roomSeats.get(14); // Ví dụ ghế B03
+        Seat seat2 = roomSeats.get(15); // Ví dụ ghế B04
 
         Booking booking = bookingRepository.save(Booking.builder()
-                .bookingCode("BK" + System.currentTimeMillis())
+                .bookingCode("BK-100001")
                 .user(customer)
                 .showtime(firstShowtime)
                 .contactEmail(customer.getEmail())
                 .contactPhone(customer.getPhone())
                 .paymentMethod("VNPAY")
                 .paymentStatus("paid")
+                .paymentTransactionId("TXN-VNPAY-100001")
                 .subtotal(new BigDecimal("180000.00"))
                 .discountAmount(BigDecimal.ZERO)
                 .totalAmount(new BigDecimal("180000.00"))
+                .paidAt(LocalDateTime.now().minusHours(2))
                 .status("confirmed")
                 .build());
 
@@ -595,7 +606,8 @@ public class DataSeeder implements CommandLineRunner {
                 .seatCode(seat1.getSeatNumber())
                 .seatType(seat1.getSeatType())
                 .finalPrice(new BigDecimal("90000.00"))
-                .ticketCode("TK-" + seat1.getSeatNumber())
+                .ticketCode("TK-100001-" + seat1.getSeatNumber())
+                .qrCodeUrl("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TK-100001-" + seat1.getSeatNumber())
                 .checkinStatus("unchecked")
                 .build());
 
@@ -606,10 +618,149 @@ public class DataSeeder implements CommandLineRunner {
                 .seatCode(seat2.getSeatNumber())
                 .seatType(seat2.getSeatType())
                 .finalPrice(new BigDecimal("90000.00"))
-                .ticketCode("TK-" + seat2.getSeatNumber())
+                .ticketCode("TK-100001-" + seat2.getSeatNumber())
+                .qrCodeUrl("https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=TK-100001-" + seat2.getSeatNumber())
                 .checkinStatus("unchecked")
                 .build());
 
         log.info("Đã tạo mẫu 1 đơn đặt vé và 2 ghế đã đặt cho suất chiếu #{} để kiểm thử giao diện sơ đồ ghế!", firstShowtime.getId());
+    }
+
+    private void seedWeek3Data() {
+        seedCoupons();
+        seedTransactionsAndHistory();
+    }
+
+    private void seedCoupons() {
+        if (couponRepository.count() > 0) {
+            log.info("Dữ liệu mã giảm giá (Coupons) đã tồn tại.");
+            return;
+        }
+
+        log.info("Khởi tạo danh mục mã giảm giá (Coupons) cho Tuần 3...");
+
+        couponRepository.save(Coupon.builder()
+                .code("CINEMA20")
+                .type("percentage")
+                .value(new BigDecimal("20.00"))
+                .minOrderAmount(new BigDecimal("150000.00"))
+                .maxDiscount(new BigDecimal("50000.00"))
+                .usageLimit(100)
+                .usedCount(1)
+                .perUserLimit(2)
+                .validFrom(LocalDateTime.of(2026, 1, 1, 0, 0))
+                .validTo(LocalDateTime.of(2026, 12, 31, 23, 59))
+                .status("active")
+                .build());
+
+        couponRepository.save(Coupon.builder()
+                .code("WELCOME30K")
+                .type("fixed_amount")
+                .value(new BigDecimal("30000.00"))
+                .minOrderAmount(new BigDecimal("100000.00"))
+                .maxDiscount(new BigDecimal("30000.00"))
+                .usageLimit(200)
+                .usedCount(0)
+                .perUserLimit(1)
+                .validFrom(LocalDateTime.of(2026, 1, 1, 0, 0))
+                .validTo(LocalDateTime.of(2026, 12, 31, 23, 59))
+                .status("active")
+                .build());
+
+        couponRepository.save(Coupon.builder()
+                .code("VIP50K")
+                .type("fixed_amount")
+                .value(new BigDecimal("50000.00"))
+                .minOrderAmount(new BigDecimal("300000.00"))
+                .maxDiscount(new BigDecimal("50000.00"))
+                .usageLimit(50)
+                .usedCount(0)
+                .perUserLimit(3)
+                .validFrom(LocalDateTime.of(2026, 1, 1, 0, 0))
+                .validTo(LocalDateTime.of(2026, 12, 31, 23, 59))
+                .status("active")
+                .build());
+
+        log.info("Khởi tạo mã giảm giá hoàn tất!");
+    }
+
+    private void seedTransactionsAndHistory() {
+        if (paymentAttemptRepository.count() > 0) {
+            log.info("Dữ liệu giao dịch thanh toán & lịch sử đơn Tuần 3 đã tồn tại.");
+            return;
+        }
+
+        List<Booking> bookings = bookingRepository.findAll();
+        if (bookings.isEmpty()) return;
+
+        Booking firstBooking = bookings.get(0);
+        List<FnbItem> fnbItems = fnbItemRepository.findAll();
+
+        // Nạp mẫu bắp nước đi kèm đơn đầu tiên nếu chưa có
+        if (bookingFnbRepository.count() == 0 && !fnbItems.isEmpty()) {
+            FnbItem combo = fnbItems.stream()
+                    .filter(i -> "combo".equalsIgnoreCase(i.getCategory()))
+                    .findFirst()
+                    .orElse(fnbItems.get(0));
+
+            bookingFnbRepository.save(BookingFnb.builder()
+                    .booking(firstBooking)
+                    .fnbItem(combo)
+                    .quantity(1)
+                    .unitPrice(combo.getBasePrice())
+                    .totalPrice(combo.getBasePrice())
+                    .pickupStatus("unclaimed")
+                    .build());
+        }
+
+        // Nạp lịch sử trạng thái đơn đặt vé
+        if (bookingStatusHistoryRepository.count() == 0) {
+            bookingStatusHistoryRepository.save(BookingStatusHistory.builder()
+                    .booking(firstBooking)
+                    .oldStatus(null)
+                    .newStatus("pending")
+                    .note("Khởi tạo đơn đặt vé mẫu và giữ ghế tạm thời (5 phút)")
+                    .changedBy(firstBooking.getContactEmail())
+                    .build());
+
+            bookingStatusHistoryRepository.save(BookingStatusHistory.builder()
+                    .booking(firstBooking)
+                    .oldStatus("pending")
+                    .newStatus("confirmed")
+                    .note("Thanh toán thành công qua VNPAY (Số tiền: 180000.00 VNĐ, Điểm thưởng cộng: +180 điểm)")
+                    .changedBy("PAYMENT_GATEWAY")
+                    .build());
+        }
+
+        // Nạp giao dịch thanh toán mẫu
+        paymentAttemptRepository.save(PaymentAttempt.builder()
+                .booking(firstBooking)
+                .paymentMethod("VNPAY")
+                .transactionId(firstBooking.getPaymentTransactionId() != null ? firstBooking.getPaymentTransactionId() : "TXN-VNPAY-100001")
+                .amount(firstBooking.getTotalAmount())
+                .status("success")
+                .gatewayResponse("{\"resultCode\":0,\"message\":\"Giao dịch thành công\"}")
+                .build());
+
+        // Nạp giao dịch tích điểm thưởng thành viên mẫu
+        User user = firstBooking.getUser();
+        if (user != null && loyaltyTransactionRepository.count() == 0) {
+            int currentPoints = user.getLoyaltyPoints() != null ? user.getLoyaltyPoints() : 50;
+            int newBalance = currentPoints + 180;
+            user.setLoyaltyPoints(newBalance);
+            user.setMemberTier(newBalance >= 200 ? "silver" : "bronze");
+            userRepository.save(user);
+
+            loyaltyTransactionRepository.save(LoyaltyTransaction.builder()
+                    .user(user)
+                    .booking(firstBooking)
+                    .type("earn")
+                    .points(180)
+                    .balanceAfter(newBalance)
+                    .description("Tích +180 điểm thưởng từ đơn đặt vé " + firstBooking.getBookingCode())
+                    .build());
+        }
+
+        log.info("Khởi tạo dữ liệu mẫu Tuần 3 (Coupons, BookingFnb, BookingStatusHistory, PaymentAttempt, LoyaltyTransaction) hoàn tất!");
     }
 }
