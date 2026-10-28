@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -29,7 +30,7 @@ public class DataSeeder implements CommandLineRunner {
     private final HolidayRepository holidayRepository;
     private final UserRepository userRepository;
 
-    // Repositories cho Tuần 2
+    // Repositories cho TuĂ¡ÂºÂ§n 2
     private final SeatRepository seatRepository;
     private final ShowtimeRepository showtimeRepository;
     private final TicketPriceRuleRepository ticketPriceRuleRepository;
@@ -37,13 +38,16 @@ public class DataSeeder implements CommandLineRunner {
     private final TicketRepository ticketRepository;
     private final BookingRepository bookingRepository;
 
-    // Repositories cho Tuần 3
+    // Repositories cho TuĂ¡ÂºÂ§n 3
     private final CouponRepository couponRepository;
     private final BookingFnbRepository bookingFnbRepository;
     private final BookingStatusHistoryRepository bookingStatusHistoryRepository;
     private final PaymentAttemptRepository paymentAttemptRepository;
     private final RefundRepository refundRepository;
     private final LoyaltyTransactionRepository loyaltyTransactionRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final ReviewRepository reviewRepository;
+    private final FavoriteRepository favoriteRepository;
 
     @Override
     @Transactional
@@ -51,34 +55,36 @@ public class DataSeeder implements CommandLineRunner {
         seedWeek1Data();
         seedWeek2Data();
         seedWeek3Data();
+        syncDefaultUsersAndPasswords();
+        seedReviewAndFavoriteData();
     }
 
     private void seedWeek1Data() {
         if (genreRepository.count() > 0) {
-            log.info("Dữ liệu mẫu Tuần 1 đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u mĂ¡ÂºÂ«u TuĂ¡ÂºÂ§n 1 Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
-        log.info("Bắt đầu khởi tạo dữ liệu mẫu Tuần 1...");
+        log.info("BĂ¡ÂºÂ¯t Ă„â€˜Ă¡ÂºÂ§u khĂ¡Â»Å¸i tĂ¡ÂºÂ¡o dĂ¡Â»Â¯ liĂ¡Â»â€¡u mĂ¡ÂºÂ«u TuĂ¡ÂºÂ§n 1...");
 
-        // 1. Thể loại phim (Genres)
-        Genre hanhDong = genreRepository.save(Genre.builder().name("Hành Động").slug("hanh-dong").build());
-        Genre kinhDi = genreRepository.save(Genre.builder().name("Kinh Dị").slug("kinh-di").build());
-        Genre haiHuoc = genreRepository.save(Genre.builder().name("Hài Hước").slug("hai-huoc").build());
-        Genre tinhCam = genreRepository.save(Genre.builder().name("Tình Cảm").slug("tinh-cam").build());
-        Genre hoatHinh = genreRepository.save(Genre.builder().name("Hoạt Hình").slug("hoat-hinh").build());
-        Genre sciFi = genreRepository.save(Genre.builder().name("Khoa Học Viễn Tưởng").slug("khoa-hoc-vien-tuong").build());
-        Genre phieuLuu = genreRepository.save(Genre.builder().name("Phiêu Lưu").slug("phieu-luu").build());
-        Genre tamLy = genreRepository.save(Genre.builder().name("Tâm Lý").slug("tam-ly").build());
+        // 1. ThĂ¡Â»Æ’ loĂ¡ÂºÂ¡i phim (Genres)
+        Genre hanhDong = genreRepository.save(Genre.builder().name("HÄ‚Â nh Ă„ÂĂ¡Â»â„¢ng").slug("hanh-dong").build());
+        Genre kinhDi = genreRepository.save(Genre.builder().name("Kinh DĂ¡Â»â€¹").slug("kinh-di").build());
+        Genre haiHuoc = genreRepository.save(Genre.builder().name("HÄ‚Â i HĂ†Â°Ă¡Â»â€ºc").slug("hai-huoc").build());
+        Genre tinhCam = genreRepository.save(Genre.builder().name("TÄ‚Â¬nh CĂ¡ÂºÂ£m").slug("tinh-cam").build());
+        Genre hoatHinh = genreRepository.save(Genre.builder().name("HoĂ¡ÂºÂ¡t HÄ‚Â¬nh").slug("hoat-hinh").build());
+        Genre sciFi = genreRepository.save(Genre.builder().name("Khoa HĂ¡Â»Âc ViĂ¡Â»â€¦n TĂ†Â°Ă¡Â»Å¸ng").slug("khoa-hoc-vien-tuong").build());
+        Genre phieuLuu = genreRepository.save(Genre.builder().name("PhiÄ‚Âªu LĂ†Â°u").slug("phieu-luu").build());
+        Genre tamLy = genreRepository.save(Genre.builder().name("TÄ‚Â¢m LÄ‚Â½").slug("tam-ly").build());
 
         // 2. Phim (Movies)
         Movie mai = movieRepository.save(Movie.builder()
                 .title("Mai")
-                .description("Câu chuyện về cuộc đời của Mai, một phụ nữ làm nghề massage trị liệu với nhiều uẩn khúc trong quá khứ.")
+                .description("CÄ‚Â¢u chuyĂ¡Â»â€¡n vĂ¡Â»Â cuĂ¡Â»â„¢c Ă„â€˜Ă¡Â»Âi cĂ¡Â»Â§a Mai, mĂ¡Â»â„¢t phĂ¡Â»Â¥ nĂ¡Â»Â¯ lÄ‚Â m nghĂ¡Â»Â massage trĂ¡Â»â€¹ liĂ¡Â»â€¡u vĂ¡Â»â€ºi nhiĂ¡Â»Âu uĂ¡ÂºÂ©n khÄ‚Âºc trong quÄ‚Â¡ khĂ¡Â»Â©.")
                 .durationMinutes(131)
                 .ageRating("C18")
-                .language("Tiếng Việt")
-                .director("Trấn Thành")
+                .language("TiĂ¡ÂºÂ¿ng ViĂ¡Â»â€¡t")
+                .director("TrĂ¡ÂºÂ¥n ThÄ‚Â nh")
                 .status("now_showing")
                 .releaseDate(LocalDate.of(2024, 2, 10))
                 .endDate(LocalDate.of(2026, 12, 31))
@@ -89,16 +95,16 @@ public class DataSeeder implements CommandLineRunner {
         movieGenreRepository.save(MovieGenre.builder().movie(mai).genre(tamLy).build());
         movieGenreRepository.save(MovieGenre.builder().movie(mai).genre(tinhCam).build());
 
-        movieCastRepository.save(MovieCast.builder().movie(mai).roleType("director").personName("Trấn Thành").displayOrder(1).build());
-        movieCastRepository.save(MovieCast.builder().movie(mai).roleType("actor").personName("Phương Anh Đào").characterName("Mai").displayOrder(2).build());
-        movieCastRepository.save(MovieCast.builder().movie(mai).roleType("actor").personName("Tuấn Trần").characterName("Dương").displayOrder(3).build());
+        movieCastRepository.save(MovieCast.builder().movie(mai).roleType("director").personName("TrĂ¡ÂºÂ¥n ThÄ‚Â nh").displayOrder(1).build());
+        movieCastRepository.save(MovieCast.builder().movie(mai).roleType("actor").personName("PhĂ†Â°Ă†Â¡ng Anh Ă„ÂÄ‚Â o").characterName("Mai").displayOrder(2).build());
+        movieCastRepository.save(MovieCast.builder().movie(mai).roleType("actor").personName("TuĂ¡ÂºÂ¥n TrĂ¡ÂºÂ§n").characterName("DĂ†Â°Ă†Â¡ng").displayOrder(3).build());
 
         Movie dune2 = movieRepository.save(Movie.builder()
-                .title("Dune: Hành Tinh Cát - Phần 2")
-                .description("Paul Atreides hợp tác cùng Chani và người Fremen trong cuộc báo thù chống lại những kẻ đã hủy hoại gia tộc mình.")
+                .title("Dune: HÄ‚Â nh Tinh CÄ‚Â¡t - PhĂ¡ÂºÂ§n 2")
+                .description("Paul Atreides hĂ¡Â»Â£p tÄ‚Â¡c cÄ‚Â¹ng Chani vÄ‚Â  ngĂ†Â°Ă¡Â»Âi Fremen trong cuĂ¡Â»â„¢c bÄ‚Â¡o thÄ‚Â¹ chĂ¡Â»â€˜ng lĂ¡ÂºÂ¡i nhĂ¡Â»Â¯ng kĂ¡ÂºÂ» Ă„â€˜Ä‚Â£ hĂ¡Â»Â§y hoĂ¡ÂºÂ¡i gia tĂ¡Â»â„¢c mÄ‚Â¬nh.")
                 .durationMinutes(166)
                 .ageRating("C16")
-                .language("Tiếng Anh - Phụ đề tiếng Việt")
+                .language("TiĂ¡ÂºÂ¿ng Anh - PhĂ¡Â»Â¥ Ă„â€˜Ă¡Â»Â tiĂ¡ÂºÂ¿ng ViĂ¡Â»â€¡t")
                 .director("Denis Villeneuve")
                 .status("now_showing")
                 .releaseDate(LocalDate.of(2024, 3, 1))
@@ -112,15 +118,15 @@ public class DataSeeder implements CommandLineRunner {
         movieGenreRepository.save(MovieGenre.builder().movie(dune2).genre(hanhDong).build());
 
         movieCastRepository.save(MovieCast.builder().movie(dune2).roleType("director").personName("Denis Villeneuve").displayOrder(1).build());
-        movieCastRepository.save(MovieCast.builder().movie(dune2).roleType("actor").personName("Timothée Chalamet").characterName("Paul Atreides").displayOrder(2).build());
+        movieCastRepository.save(MovieCast.builder().movie(dune2).roleType("actor").personName("TimothÄ‚Â©e Chalamet").characterName("Paul Atreides").displayOrder(2).build());
         movieCastRepository.save(MovieCast.builder().movie(dune2).roleType("actor").personName("Zendaya").characterName("Chani").displayOrder(3).build());
 
         Movie kungfuPanda = movieRepository.save(Movie.builder()
                 .title("Kung Fu Panda 4")
-                .description("Po chuẩn bị trở thành Thủ lĩnh Tinh thần của Thung lũng Bình Yên và phải tìm kiếm một Thần Long Đại Hiệp mới.")
+                .description("Po chuĂ¡ÂºÂ©n bĂ¡Â»â€¹ trĂ¡Â»Å¸ thÄ‚Â nh ThĂ¡Â»Â§ lĂ„Â©nh Tinh thĂ¡ÂºÂ§n cĂ¡Â»Â§a Thung lĂ…Â©ng BÄ‚Â¬nh YÄ‚Âªn vÄ‚Â  phĂ¡ÂºÂ£i tÄ‚Â¬m kiĂ¡ÂºÂ¿m mĂ¡Â»â„¢t ThĂ¡ÂºÂ§n Long Ă„ÂĂ¡ÂºÂ¡i HiĂ¡Â»â€¡p mĂ¡Â»â€ºi.")
                 .durationMinutes(94)
                 .ageRating("P")
-                .language("Lồng tiếng Việt / Phụ đề")
+                .language("LĂ¡Â»â€œng tiĂ¡ÂºÂ¿ng ViĂ¡Â»â€¡t / PhĂ¡Â»Â¥ Ă„â€˜Ă¡Â»Â")
                 .director("Mike Mitchell")
                 .status("now_showing")
                 .releaseDate(LocalDate.of(2024, 3, 8))
@@ -133,27 +139,27 @@ public class DataSeeder implements CommandLineRunner {
         movieGenreRepository.save(MovieGenre.builder().movie(kungfuPanda).genre(haiHuoc).build());
         movieGenreRepository.save(MovieGenre.builder().movie(kungfuPanda).genre(phieuLuu).build());
 
-        // 3. Cụm rạp & Phòng chiếu (Cinemas & CinemaRooms)
+        // 3. CĂ¡Â»Â¥m rĂ¡ÂºÂ¡p & PhÄ‚Â²ng chiĂ¡ÂºÂ¿u (Cinemas & CinemaRooms)
         Cinema cgvVincom = cinemaRepository.save(Cinema.builder()
-                .name("CGV Vincom Đồng Khởi")
-                .address("Tầng 3, TTTM Vincom Center, 72 Lê Thánh Tôn, Bến Nghé")
-                .city("Hồ Chí Minh")
-                .district("Quận 1")
+                .name("CGV Vincom Ă„ÂĂ¡Â»â€œng KhĂ¡Â»Å¸i")
+                .address("TĂ¡ÂºÂ§ng 3, TTTM Vincom Center, 72 LÄ‚Âª ThÄ‚Â¡nh TÄ‚Â´n, BĂ¡ÂºÂ¿n NghÄ‚Â©")
+                .city("HĂ¡Â»â€œ ChÄ‚Â­ Minh")
+                .district("QuĂ¡ÂºÂ­n 1")
                 .phone("1900 6017")
                 .email("cgv_dongkhoi@cgv.vn")
                 .latitude(new BigDecimal("10.7779"))
                 .longitude(new BigDecimal("106.7018"))
                 .build());
 
-        cinemaRoomRepository.save(CinemaRoom.builder().cinema(cgvVincom).name("Phòng 1 (IMAX)").roomType("IMAX").totalSeats(120).status("active").build());
-        cinemaRoomRepository.save(CinemaRoom.builder().cinema(cgvVincom).name("Phòng 2 (Gold Class)").roomType("2D").totalSeats(48).status("active").build());
-        cinemaRoomRepository.save(CinemaRoom.builder().cinema(cgvVincom).name("Phòng 3 (Standard)").roomType("2D").totalSeats(90).status("active").build());
+        cinemaRoomRepository.save(CinemaRoom.builder().cinema(cgvVincom).name("PhÄ‚Â²ng 1 (IMAX)").roomType("IMAX").totalSeats(120).status("active").build());
+        cinemaRoomRepository.save(CinemaRoom.builder().cinema(cgvVincom).name("PhÄ‚Â²ng 2 (Gold Class)").roomType("2D").totalSeats(48).status("active").build());
+        cinemaRoomRepository.save(CinemaRoom.builder().cinema(cgvVincom).name("PhÄ‚Â²ng 3 (Standard)").roomType("2D").totalSeats(90).status("active").build());
 
         Cinema lotteCanTho = cinemaRepository.save(Cinema.builder()
-                .name("Lotte Cinema Cần Thơ")
-                .address("Tầng 3 Lotte Mart, 84 Mậu Thân, An Hòa")
-                .city("Cần Thơ")
-                .district("Ninh Kiều")
+                .name("Lotte Cinema CĂ¡ÂºÂ§n ThĂ†Â¡")
+                .address("TĂ¡ÂºÂ§ng 3 Lotte Mart, 84 MĂ¡ÂºÂ­u ThÄ‚Â¢n, An HÄ‚Â²a")
+                .city("CĂ¡ÂºÂ§n ThĂ†Â¡")
+                .district("Ninh KiĂ¡Â»Âu")
                 .phone("0292 3696 868")
                 .email("lotte_cantho@lotte.vn")
                 .latitude(new BigDecimal("10.0452"))
@@ -164,10 +170,10 @@ public class DataSeeder implements CommandLineRunner {
         cinemaRoomRepository.save(CinemaRoom.builder().cinema(lotteCanTho).name("Cinema 2 (3D)").roomType("3D").totalSeats(75).status("active").build());
 
         Cinema galaxyNguyenDu = cinemaRepository.save(Cinema.builder()
-                .name("Galaxy Nguyễn Du")
-                .address("116 Nguyễn Du, Phường Bến Thành")
-                .city("Hồ Chí Minh")
-                .district("Quận 1")
+                .name("Galaxy NguyĂ¡Â»â€¦n Du")
+                .address("116 NguyĂ¡Â»â€¦n Du, PhĂ†Â°Ă¡Â»Âng BĂ¡ÂºÂ¿n ThÄ‚Â nh")
+                .city("HĂ¡Â»â€œ ChÄ‚Â­ Minh")
+                .district("QuĂ¡ÂºÂ­n 1")
                 .phone("1900 2224")
                 .email("galaxy_nguyendu@galaxy.vn")
                 .latitude(new BigDecimal("10.7735"))
@@ -177,9 +183,9 @@ public class DataSeeder implements CommandLineRunner {
         cinemaRoomRepository.save(CinemaRoom.builder().cinema(galaxyNguyenDu).name("Screen 1").roomType("2D").totalSeats(100).status("active").build());
         cinemaRoomRepository.save(CinemaRoom.builder().cinema(galaxyNguyenDu).name("Screen 2").roomType("2D").totalSeats(85).status("active").build());
 
-        // 4. Banner quảng cáo
+        // 4. Banner quĂ¡ÂºÂ£ng cÄ‚Â¡o
         bannerRepository.save(Banner.builder()
-                .title("Dune 2 - Bom tấn viễn tưởng không thể bỏ lỡ")
+                .title("Dune 2 - Bom tĂ¡ÂºÂ¥n viĂ¡Â»â€¦n tĂ†Â°Ă¡Â»Å¸ng khÄ‚Â´ng thĂ¡Â»Æ’ bĂ¡Â»Â lĂ¡Â»Â¡")
                 .imageUrl("https://images.unsplash.com/photo-1536440136628-849c177e76a1")
                 .linkUrl("/movies/" + dune2.getId())
                 .targetType("movie")
@@ -191,7 +197,7 @@ public class DataSeeder implements CommandLineRunner {
                 .build());
 
         bannerRepository.save(Banner.builder()
-                .title("Ưu đãi thành viên - Giảm 20% bắp nước mỗi thứ Tư")
+                .title("Ă†Â¯u Ă„â€˜Ä‚Â£i thÄ‚Â nh viÄ‚Âªn - GiĂ¡ÂºÂ£m 20% bĂ¡ÂºÂ¯p nĂ†Â°Ă¡Â»â€ºc mĂ¡Â»â€”i thĂ¡Â»Â© TĂ†Â°")
                 .imageUrl("https://images.unsplash.com/photo-1572177812156-58036aae439c")
                 .linkUrl("/promotions/member-wednesday")
                 .targetType("event")
@@ -201,18 +207,18 @@ public class DataSeeder implements CommandLineRunner {
                 .endDate(LocalDate.of(2026, 12, 31))
                 .build());
 
-        // 5. Ngày lễ (Holidays)
-        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 1, 1)).name("Tết Dương Lịch").type("national").build());
-        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 4, 30)).name("Ngày Giải phóng Miền Nam").type("national").build());
-        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 5, 1)).name("Quốc tế Lao động").type("national").build());
-        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 9, 2)).name("Quốc Khánh").type("national").build());
+        // 5. NgÄ‚Â y lĂ¡Â»â€¦ (Holidays)
+        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 1, 1)).name("TĂ¡ÂºÂ¿t DĂ†Â°Ă†Â¡ng LĂ¡Â»â€¹ch").type("national").build());
+        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 4, 30)).name("NgÄ‚Â y GiĂ¡ÂºÂ£i phÄ‚Â³ng MiĂ¡Â»Ân Nam").type("national").build());
+        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 5, 1)).name("QuĂ¡Â»â€˜c tĂ¡ÂºÂ¿ Lao Ă„â€˜Ă¡Â»â„¢ng").type("national").build());
+        holidayRepository.save(Holiday.builder().holidayDate(LocalDate.of(2026, 9, 2)).name("QuĂ¡Â»â€˜c KhÄ‚Â¡nh").type("national").build());
 
-        // 6. Tài khoản mẫu
+        // 6. TÄ‚Â i khoĂ¡ÂºÂ£n mĂ¡ÂºÂ«u
         userRepository.save(User.builder()
-                .fullName("Quản Trị Viên")
+                .fullName("QuĂ¡ÂºÂ£n TrĂ¡Â»â€¹ ViÄ‚Âªn")
                 .email("admin@cinema.com")
                 .phone("0901234567")
-                .passwordHash("$2a$10$dummyHashAdminPassword123")
+                .passwordHash(passwordEncoder.encode("Admin@123"))
                 .role("ADMIN")
                 .loyaltyPoints(1000)
                 .memberTier("platinum")
@@ -220,17 +226,17 @@ public class DataSeeder implements CommandLineRunner {
                 .build());
 
         userRepository.save(User.builder()
-                .fullName("Nguyễn Văn A")
+                .fullName("NguyĂ¡Â»â€¦n VĂ„Æ’n A")
                 .email("khachhang@gmail.com")
                 .phone("0912345678")
-                .passwordHash("$2a$10$dummyHashCustomerPassword123")
+                .passwordHash(passwordEncoder.encode("Customer@123"))
                 .role("CUSTOMER")
                 .loyaltyPoints(50)
                 .memberTier("bronze")
                 .status("active")
                 .build());
 
-        log.info("Khởi tạo dữ liệu mẫu Tuần 1 hoàn tất!");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o dĂ¡Â»Â¯ liĂ¡Â»â€¡u mĂ¡ÂºÂ«u TuĂ¡ÂºÂ§n 1 hoÄ‚Â n tĂ¡ÂºÂ¥t!");
     }
 
     private void seedWeek2Data() {
@@ -243,11 +249,11 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedSeats() {
         if (seatRepository.count() > 0) {
-            log.info("Dữ liệu ghế đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u ghĂ¡ÂºÂ¿ Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
-        log.info("Tự động sinh ma trận ghế cho tất cả phòng chiếu...");
+        log.info("TĂ¡Â»Â± Ă„â€˜Ă¡Â»â„¢ng sinh ma trĂ¡ÂºÂ­n ghĂ¡ÂºÂ¿ cho tĂ¡ÂºÂ¥t cĂ¡ÂºÂ£ phÄ‚Â²ng chiĂ¡ÂºÂ¿u...");
         List<CinemaRoom> rooms = cinemaRoomRepository.findAll();
 
         for (CinemaRoom room : rooms) {
@@ -261,7 +267,7 @@ public class DataSeeder implements CommandLineRunner {
                 cols = 12;
                 vipRows = new HashSet<>(Arrays.asList("D", "E", "F", "G"));
                 coupleRows = new HashSet<>(Collections.singletonList("J"));
-            } else if ("Phòng 2 (Gold Class)".equalsIgnoreCase(room.getName())) {
+            } else if ("PhÄ‚Â²ng 2 (Gold Class)".equalsIgnoreCase(room.getName())) {
                 rows = 6;
                 cols = 8;
                 vipRows = new HashSet<>(Arrays.asList("C", "D"));
@@ -296,18 +302,18 @@ public class DataSeeder implements CommandLineRunner {
             room.setTotalSeats(seats.size());
             cinemaRoomRepository.save(room);
         }
-        log.info("Sinh ma trận ghế thành công!");
+        log.info("Sinh ma trĂ¡ÂºÂ­n ghĂ¡ÂºÂ¿ thÄ‚Â nh cÄ‚Â´ng!");
     }
 
     private void seedTicketPriceRules() {
         if (ticketPriceRuleRepository.count() > 0) {
-            log.info("Dữ liệu bảng giá vé đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u bĂ¡ÂºÂ£ng giÄ‚Â¡ vÄ‚Â© Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
-        log.info("Khởi tạo danh mục quy tắc tính giá vé (Ticket Price Rules)...");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o danh mĂ¡Â»Â¥c quy tĂ¡ÂºÂ¯c tÄ‚Â­nh giÄ‚Â¡ vÄ‚Â© (Ticket Price Rules)...");
 
-        // Quy tắc chuẩn 2D
+        // Quy tĂ¡ÂºÂ¯c chuĂ¡ÂºÂ©n 2D
         ticketPriceRuleRepository.save(TicketPriceRule.builder()
                 .screenType("2D").seatType("standard").dayType("weekday").timeSlot("morning")
                 .customerType("adult").price(new BigDecimal("65000.00")).isActive(true).build());
@@ -336,7 +342,7 @@ public class DataSeeder implements CommandLineRunner {
                 .screenType("2D").seatType("couple").dayType("weekend").timeSlot("evening")
                 .customerType("adult").price(new BigDecimal("190000.00")).isActive(true).build());
 
-        // Quy tắc 3D
+        // Quy tĂ¡ÂºÂ¯c 3D
         ticketPriceRuleRepository.save(TicketPriceRule.builder()
                 .screenType("3D").seatType("standard").dayType("weekday").timeSlot("regular")
                 .customerType("adult").price(new BigDecimal("110000.00")).isActive(true).build());
@@ -345,7 +351,7 @@ public class DataSeeder implements CommandLineRunner {
                 .screenType("3D").seatType("standard").dayType("weekend").timeSlot("regular")
                 .customerType("adult").price(new BigDecimal("135000.00")).isActive(true).build());
 
-        // Quy tắc IMAX
+        // Quy tĂ¡ÂºÂ¯c IMAX
         ticketPriceRuleRepository.save(TicketPriceRule.builder()
                 .screenType("IMAX").seatType("standard").dayType("weekday").timeSlot("regular")
                 .customerType("adult").price(new BigDecimal("150000.00")).isActive(true).build());
@@ -358,16 +364,16 @@ public class DataSeeder implements CommandLineRunner {
                 .screenType("IMAX").seatType("vip").dayType("weekend").timeSlot("evening")
                 .customerType("adult").price(new BigDecimal("220000.00")).isActive(true).build());
 
-        log.info("Khởi tạo bảng giá vé hoàn tất!");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o bĂ¡ÂºÂ£ng giÄ‚Â¡ vÄ‚Â© hoÄ‚Â n tĂ¡ÂºÂ¥t!");
     }
 
     private void seedShowtimes() {
         if (showtimeRepository.count() > 0) {
-            log.info("Dữ liệu suất chiếu đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u suĂ¡ÂºÂ¥t chiĂ¡ÂºÂ¿u Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
-        log.info("Khởi tạo lịch chiếu mẫu (Showtimes)...");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o lĂ¡Â»â€¹ch chiĂ¡ÂºÂ¿u mĂ¡ÂºÂ«u (Showtimes)...");
         List<Movie> movies = movieRepository.findAll();
         List<CinemaRoom> rooms = cinemaRoomRepository.findAll();
 
@@ -383,11 +389,11 @@ public class DataSeeder implements CommandLineRunner {
 
         LocalDate today = LocalDate.now();
 
-        // Lịch chiếu hôm nay & ngày mai
+        // LĂ¡Â»â€¹ch chiĂ¡ÂºÂ¿u hÄ‚Â´m nay & ngÄ‚Â y mai
         for (int dayOffset = 0; dayOffset <= 2; dayOffset++) {
             LocalDate date = today.plusDays(dayOffset);
 
-            // IMAX Room: chiếu Dune 2
+            // IMAX Room: chiĂ¡ÂºÂ¿u Dune 2
             showtimeRepository.save(Showtime.builder()
                     .movie(dune2)
                     .cinemaRoom(imaxRoom)
@@ -415,7 +421,7 @@ public class DataSeeder implements CommandLineRunner {
                     .status("open")
                     .build());
 
-            // 2D Room 1: chiếu phim Mai
+            // 2D Room 1: chiĂ¡ÂºÂ¿u phim Mai
             showtimeRepository.save(Showtime.builder()
                     .movie(mai)
                     .cinemaRoom(room2D_1)
@@ -452,7 +458,7 @@ public class DataSeeder implements CommandLineRunner {
                     .status("open")
                     .build());
 
-            // 2D Room 2: chiếu Kung Fu Panda
+            // 2D Room 2: chiĂ¡ÂºÂ¿u Kung Fu Panda
             showtimeRepository.save(Showtime.builder()
                     .movie(kungfu)
                     .cinemaRoom(room2D_2)
@@ -481,90 +487,90 @@ public class DataSeeder implements CommandLineRunner {
                     .build());
         }
 
-        log.info("Khởi tạo suất chiếu hoàn tất!");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o suĂ¡ÂºÂ¥t chiĂ¡ÂºÂ¿u hoÄ‚Â n tĂ¡ÂºÂ¥t!");
     }
 
     private void seedFnbItems() {
         if (fnbItemRepository.count() > 0) {
-            log.info("Dữ liệu bắp nước đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u bĂ¡ÂºÂ¯p nĂ†Â°Ă¡Â»â€ºc Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
-        log.info("Khởi tạo danh mục bắp nước & combo F&B...");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o danh mĂ¡Â»Â¥c bĂ¡ÂºÂ¯p nĂ†Â°Ă¡Â»â€ºc & combo F&B...");
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Bắp Rang Bơ Truyền Thống (L)")
+                .itemName("BĂ¡ÂºÂ¯p Rang BĂ†Â¡ TruyĂ¡Â»Ân ThĂ¡Â»â€˜ng (L)")
                 .category("popcorn")
-                .description("Bắp rang thơm béo vị bơ ngọt tự nhiên cỡ lớn")
+                .description("BĂ¡ÂºÂ¯p rang thĂ†Â¡m bÄ‚Â©o vĂ¡Â»â€¹ bĂ†Â¡ ngĂ¡Â»Ât tĂ¡Â»Â± nhiÄ‚Âªn cĂ¡Â»Â¡ lĂ¡Â»â€ºn")
                 .imageUrl("https://images.unsplash.com/photo-1578849278619-e73505e9610f")
                 .basePrice(new BigDecimal("49000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Bắp Phô Mai Thượng Hạng (L)")
+                .itemName("BĂ¡ÂºÂ¯p PhÄ‚Â´ Mai ThĂ†Â°Ă¡Â»Â£ng HĂ¡ÂºÂ¡ng (L)")
                 .category("popcorn")
-                .description("Bắp giòn phủ lớp bột phô mai hảo hạng đậm đà")
+                .description("BĂ¡ÂºÂ¯p giÄ‚Â²n phĂ¡Â»Â§ lĂ¡Â»â€ºp bĂ¡Â»â„¢t phÄ‚Â´ mai hĂ¡ÂºÂ£o hĂ¡ÂºÂ¡ng Ă„â€˜Ă¡ÂºÂ­m Ă„â€˜Ä‚Â ")
                 .imageUrl("https://images.unsplash.com/photo-1585647347483-22b66260dfff")
                 .basePrice(new BigDecimal("55000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Bắp Caramel Cháy (L)")
+                .itemName("BĂ¡ÂºÂ¯p Caramel ChÄ‚Â¡y (L)")
                 .category("popcorn")
-                .description("Bắp caramel giòn rụm thơm lừng ngọt ngào")
+                .description("BĂ¡ÂºÂ¯p caramel giÄ‚Â²n rĂ¡Â»Â¥m thĂ†Â¡m lĂ¡Â»Â«ng ngĂ¡Â»Ât ngÄ‚Â o")
                 .imageUrl("https://images.unsplash.com/photo-1505686994434-e3cc5abf1330")
                 .basePrice(new BigDecimal("55000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Coca-Cola Tươi 32oz")
+                .itemName("Coca-Cola TĂ†Â°Ă†Â¡i 32oz")
                 .category("drink")
-                .description("Nước ngọt Coca-Cola tươi mát lạnh giải khát")
+                .description("NĂ†Â°Ă¡Â»â€ºc ngĂ¡Â»Ât Coca-Cola tĂ†Â°Ă†Â¡i mÄ‚Â¡t lĂ¡ÂºÂ¡nh giĂ¡ÂºÂ£i khÄ‚Â¡t")
                 .imageUrl("https://images.unsplash.com/photo-1622483767028-3f66f32aef97")
                 .basePrice(new BigDecimal("35000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Sprite Chanh Tươi 32oz")
+                .itemName("Sprite Chanh TĂ†Â°Ă†Â¡i 32oz")
                 .category("drink")
-                .description("Nước ngọt vị chanh Sprite sảng khoái mát lạnh")
+                .description("NĂ†Â°Ă¡Â»â€ºc ngĂ¡Â»Ât vĂ¡Â»â€¹ chanh Sprite sĂ¡ÂºÂ£ng khoÄ‚Â¡i mÄ‚Â¡t lĂ¡ÂºÂ¡nh")
                 .imageUrl("https://images.unsplash.com/photo-1551024709-8f23befc6f87")
                 .basePrice(new BigDecimal("35000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Combo Solo (1 Bắp L + 1 Nước 32oz)")
+                .itemName("Combo Solo (1 BĂ¡ÂºÂ¯p L + 1 NĂ†Â°Ă¡Â»â€ºc 32oz)")
                 .category("combo")
-                .description("Tiết kiệm 15% - Thích hợp cho 1 người xem phim")
+                .description("TiĂ¡ÂºÂ¿t kiĂ¡Â»â€¡m 15% - ThÄ‚Â­ch hĂ¡Â»Â£p cho 1 ngĂ†Â°Ă¡Â»Âi xem phim")
                 .imageUrl("https://images.unsplash.com/photo-1572177812156-58036aae439c")
                 .basePrice(new BigDecimal("79000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Combo Couple (1 Bắp L + 2 Nước 32oz)")
+                .itemName("Combo Couple (1 BĂ¡ÂºÂ¯p L + 2 NĂ†Â°Ă¡Â»â€ºc 32oz)")
                 .category("combo")
-                .description("Tiết kiệm 20% - Dành cho các cặp đôi hẹn hò rạp chiếu")
+                .description("TiĂ¡ÂºÂ¿t kiĂ¡Â»â€¡m 20% - DÄ‚Â nh cho cÄ‚Â¡c cĂ¡ÂºÂ·p Ă„â€˜Ä‚Â´i hĂ¡ÂºÂ¹n hÄ‚Â² rĂ¡ÂºÂ¡p chiĂ¡ÂºÂ¿u")
                 .imageUrl("https://images.unsplash.com/photo-1517604931442-7e0c8ed2963c")
                 .basePrice(new BigDecimal("109000.00"))
                 .isActive(true)
                 .build());
 
         fnbItemRepository.save(FnbItem.builder()
-                .itemName("Combo Family (2 Bắp L + 4 Nước 22oz)")
+                .itemName("Combo Family (2 BĂ¡ÂºÂ¯p L + 4 NĂ†Â°Ă¡Â»â€ºc 22oz)")
                 .category("combo")
-                .description("Tiết kiệm 25% - Hoàn hảo cho gia đình hoặc nhóm bạn 4 người")
+                .description("TiĂ¡ÂºÂ¿t kiĂ¡Â»â€¡m 25% - HoÄ‚Â n hĂ¡ÂºÂ£o cho gia Ă„â€˜Ä‚Â¬nh hoĂ¡ÂºÂ·c nhÄ‚Â³m bĂ¡ÂºÂ¡n 4 ngĂ†Â°Ă¡Â»Âi")
                 .imageUrl("https://images.unsplash.com/photo-1489599849927-2ee91cede3ba")
                 .basePrice(new BigDecimal("189000.00"))
                 .isActive(true)
                 .build());
 
-        log.info("Khởi tạo danh mục bắp nước hoàn tất!");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o danh mĂ¡Â»Â¥c bĂ¡ÂºÂ¯p nĂ†Â°Ă¡Â»â€ºc hoÄ‚Â n tĂ¡ÂºÂ¥t!");
     }
 
     private void seedSampleBookingsAndTickets() {
@@ -580,8 +586,8 @@ public class DataSeeder implements CommandLineRunner {
         List<Seat> roomSeats = seatRepository.findByCinemaRoomIdOrderByRowIndexAscColIndexAsc(firstShowtime.getCinemaRoom().getId());
         if (roomSeats.size() < 2) return;
 
-        Seat seat1 = roomSeats.get(14); // Ví dụ ghế B03
-        Seat seat2 = roomSeats.get(15); // Ví dụ ghế B04
+        Seat seat1 = roomSeats.get(14); // VÄ‚Â­ dĂ¡Â»Â¥ ghĂ¡ÂºÂ¿ B03
+        Seat seat2 = roomSeats.get(15); // VÄ‚Â­ dĂ¡Â»Â¥ ghĂ¡ÂºÂ¿ B04
 
         Booking booking = bookingRepository.save(Booking.builder()
                 .bookingCode("BK-100001")
@@ -623,7 +629,7 @@ public class DataSeeder implements CommandLineRunner {
                 .checkinStatus("unchecked")
                 .build());
 
-        log.info("Đã tạo mẫu 1 đơn đặt vé và 2 ghế đã đặt cho suất chiếu #{} để kiểm thử giao diện sơ đồ ghế!", firstShowtime.getId());
+        log.info("Ă„ÂÄ‚Â£ tĂ¡ÂºÂ¡o mĂ¡ÂºÂ«u 1 Ă„â€˜Ă†Â¡n Ă„â€˜Ă¡ÂºÂ·t vÄ‚Â© vÄ‚Â  2 ghĂ¡ÂºÂ¿ Ă„â€˜Ä‚Â£ Ă„â€˜Ă¡ÂºÂ·t cho suĂ¡ÂºÂ¥t chiĂ¡ÂºÂ¿u #{} Ă„â€˜Ă¡Â»Æ’ kiĂ¡Â»Æ’m thĂ¡Â»Â­ giao diĂ¡Â»â€¡n sĂ†Â¡ Ă„â€˜Ă¡Â»â€œ ghĂ¡ÂºÂ¿!", firstShowtime.getId());
     }
 
     private void seedWeek3Data() {
@@ -633,11 +639,11 @@ public class DataSeeder implements CommandLineRunner {
 
     private void seedCoupons() {
         if (couponRepository.count() > 0) {
-            log.info("Dữ liệu mã giảm giá (Coupons) đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u mÄ‚Â£ giĂ¡ÂºÂ£m giÄ‚Â¡ (Coupons) Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
-        log.info("Khởi tạo danh mục mã giảm giá (Coupons) cho Tuần 3...");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o danh mĂ¡Â»Â¥c mÄ‚Â£ giĂ¡ÂºÂ£m giÄ‚Â¡ (Coupons) cho TuĂ¡ÂºÂ§n 3...");
 
         couponRepository.save(Coupon.builder()
                 .code("CINEMA20")
@@ -681,12 +687,12 @@ public class DataSeeder implements CommandLineRunner {
                 .status("active")
                 .build());
 
-        log.info("Khởi tạo mã giảm giá hoàn tất!");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o mÄ‚Â£ giĂ¡ÂºÂ£m giÄ‚Â¡ hoÄ‚Â n tĂ¡ÂºÂ¥t!");
     }
 
     private void seedTransactionsAndHistory() {
         if (paymentAttemptRepository.count() > 0) {
-            log.info("Dữ liệu giao dịch thanh toán & lịch sử đơn Tuần 3 đã tồn tại.");
+            log.info("DĂ¡Â»Â¯ liĂ¡Â»â€¡u giao dĂ¡Â»â€¹ch thanh toÄ‚Â¡n & lĂ¡Â»â€¹ch sĂ¡Â»Â­ Ă„â€˜Ă†Â¡n TuĂ¡ÂºÂ§n 3 Ă„â€˜Ä‚Â£ tĂ¡Â»â€œn tĂ¡ÂºÂ¡i.");
             return;
         }
 
@@ -696,7 +702,7 @@ public class DataSeeder implements CommandLineRunner {
         Booking firstBooking = bookings.get(0);
         List<FnbItem> fnbItems = fnbItemRepository.findAll();
 
-        // Nạp mẫu bắp nước đi kèm đơn đầu tiên nếu chưa có
+        // NĂ¡ÂºÂ¡p mĂ¡ÂºÂ«u bĂ¡ÂºÂ¯p nĂ†Â°Ă¡Â»â€ºc Ă„â€˜i kÄ‚Â¨m Ă„â€˜Ă†Â¡n Ă„â€˜Ă¡ÂºÂ§u tiÄ‚Âªn nĂ¡ÂºÂ¿u chĂ†Â°a cÄ‚Â³
         if (bookingFnbRepository.count() == 0 && !fnbItems.isEmpty()) {
             FnbItem combo = fnbItems.stream()
                     .filter(i -> "combo".equalsIgnoreCase(i.getCategory()))
@@ -713,13 +719,13 @@ public class DataSeeder implements CommandLineRunner {
                     .build());
         }
 
-        // Nạp lịch sử trạng thái đơn đặt vé
+        // NĂ¡ÂºÂ¡p lĂ¡Â»â€¹ch sĂ¡Â»Â­ trĂ¡ÂºÂ¡ng thÄ‚Â¡i Ă„â€˜Ă†Â¡n Ă„â€˜Ă¡ÂºÂ·t vÄ‚Â©
         if (bookingStatusHistoryRepository.count() == 0) {
             bookingStatusHistoryRepository.save(BookingStatusHistory.builder()
                     .booking(firstBooking)
                     .oldStatus(null)
                     .newStatus("pending")
-                    .note("Khởi tạo đơn đặt vé mẫu và giữ ghế tạm thời (5 phút)")
+                    .note("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o Ă„â€˜Ă†Â¡n Ă„â€˜Ă¡ÂºÂ·t vÄ‚Â© mĂ¡ÂºÂ«u vÄ‚Â  giĂ¡Â»Â¯ ghĂ¡ÂºÂ¿ tĂ¡ÂºÂ¡m thĂ¡Â»Âi (5 phÄ‚Âºt)")
                     .changedBy(firstBooking.getContactEmail())
                     .build());
 
@@ -727,22 +733,22 @@ public class DataSeeder implements CommandLineRunner {
                     .booking(firstBooking)
                     .oldStatus("pending")
                     .newStatus("confirmed")
-                    .note("Thanh toán thành công qua VNPAY (Số tiền: 180000.00 VNĐ, Điểm thưởng cộng: +180 điểm)")
+                    .note("Thanh toÄ‚Â¡n thÄ‚Â nh cÄ‚Â´ng qua VNPAY (SĂ¡Â»â€˜ tiĂ¡Â»Ân: 180000.00 VNĂ„Â, Ă„ÂiĂ¡Â»Æ’m thĂ†Â°Ă¡Â»Å¸ng cĂ¡Â»â„¢ng: +180 Ă„â€˜iĂ¡Â»Æ’m)")
                     .changedBy("PAYMENT_GATEWAY")
                     .build());
         }
 
-        // Nạp giao dịch thanh toán mẫu
+        // NĂ¡ÂºÂ¡p giao dĂ¡Â»â€¹ch thanh toÄ‚Â¡n mĂ¡ÂºÂ«u
         paymentAttemptRepository.save(PaymentAttempt.builder()
                 .booking(firstBooking)
                 .paymentMethod("VNPAY")
                 .transactionId(firstBooking.getPaymentTransactionId() != null ? firstBooking.getPaymentTransactionId() : "TXN-VNPAY-100001")
                 .amount(firstBooking.getTotalAmount())
                 .status("success")
-                .gatewayResponse("{\"resultCode\":0,\"message\":\"Giao dịch thành công\"}")
+                .gatewayResponse("{\"resultCode\":0,\"message\":\"Giao dĂ¡Â»â€¹ch thÄ‚Â nh cÄ‚Â´ng\"}")
                 .build());
 
-        // Nạp giao dịch tích điểm thưởng thành viên mẫu
+        // NĂ¡ÂºÂ¡p giao dĂ¡Â»â€¹ch tÄ‚Â­ch Ă„â€˜iĂ¡Â»Æ’m thĂ†Â°Ă¡Â»Å¸ng thÄ‚Â nh viÄ‚Âªn mĂ¡ÂºÂ«u
         User user = firstBooking.getUser();
         if (user != null && loyaltyTransactionRepository.count() == 0) {
             int currentPoints = user.getLoyaltyPoints() != null ? user.getLoyaltyPoints() : 50;
@@ -757,10 +763,136 @@ public class DataSeeder implements CommandLineRunner {
                     .type("earn")
                     .points(180)
                     .balanceAfter(newBalance)
-                    .description("Tích +180 điểm thưởng từ đơn đặt vé " + firstBooking.getBookingCode())
+                    .description("TÄ‚Â­ch +180 Ă„â€˜iĂ¡Â»Æ’m thĂ†Â°Ă¡Â»Å¸ng tĂ¡Â»Â« Ă„â€˜Ă†Â¡n Ă„â€˜Ă¡ÂºÂ·t vÄ‚Â© " + firstBooking.getBookingCode())
                     .build());
         }
 
-        log.info("Khởi tạo dữ liệu mẫu Tuần 3 (Coupons, BookingFnb, BookingStatusHistory, PaymentAttempt, LoyaltyTransaction) hoàn tất!");
+        log.info("KhĂ¡Â»Å¸i tĂ¡ÂºÂ¡o dĂ¡Â»Â¯ liĂ¡Â»â€¡u mĂ¡ÂºÂ«u TuĂ¡ÂºÂ§n 3 (Coupons, BookingFnb, BookingStatusHistory, PaymentAttempt, LoyaltyTransaction) hoÄ‚Â n tĂ¡ÂºÂ¥t!");
+    }
+
+    private void syncDefaultUsersAndPasswords() {
+        // 1. Admin
+        userRepository.findByEmail("admin@cinema.com").ifPresentOrElse(admin -> {
+            if (!passwordEncoder.matches("Admin@123", admin.getPasswordHash())) {
+                admin.setPasswordHash(passwordEncoder.encode("Admin@123"));
+                admin.setRole("ADMIN");
+                admin.setStatus("active");
+                userRepository.save(admin);
+                log.info("ÄĂ£ Ä‘á»“ng bá»™ láº¡i máº­t kháº©u BCrypt cho tĂ i khoáº£n admin@cinema.com");
+            }
+        }, () -> {
+            userRepository.save(User.builder()
+                    .fullName("Quáº£n Trá»‹ ViĂªn")
+                    .email("admin@cinema.com")
+                    .phone("0901234567")
+                    .passwordHash(passwordEncoder.encode("Admin@123"))
+                    .role("ADMIN")
+                    .loyaltyPoints(1000)
+                    .memberTier("platinum")
+                    .status("active")
+                    .build());
+            log.info("ÄĂ£ táº¡o má»›i tĂ i khoáº£n admin@cinema.com");
+        });
+
+        // 2. Staff
+        userRepository.findByEmail("staff@cinema.com").ifPresentOrElse(staff -> {
+            if (!passwordEncoder.matches("Staff@123", staff.getPasswordHash())) {
+                staff.setPasswordHash(passwordEncoder.encode("Staff@123"));
+                staff.setRole("STAFF");
+                staff.setStatus("active");
+                userRepository.save(staff);
+                log.info("ÄĂ£ Ä‘á»“ng bá»™ láº¡i máº­t kháº©u BCrypt cho tĂ i khoáº£n staff@cinema.com");
+            }
+        }, () -> {
+            userRepository.save(User.builder()
+                    .fullName("NhĂ¢n ViĂªn SoĂ¡t VĂ©")
+                    .email("staff@cinema.com")
+                    .phone("0909999888")
+                    .passwordHash(passwordEncoder.encode("Staff@123"))
+                    .role("STAFF")
+                    .loyaltyPoints(0)
+                    .memberTier("bronze")
+                    .status("active")
+                    .build());
+            log.info("ÄĂ£ táº¡o má»›i tĂ i khoáº£n staff@cinema.com");
+        });
+
+        // 3. Customer
+        userRepository.findByEmail("khachhang@gmail.com").ifPresentOrElse(cust -> {
+            if (!passwordEncoder.matches("Customer@123", cust.getPasswordHash())) {
+                cust.setPasswordHash(passwordEncoder.encode("Customer@123"));
+                cust.setRole("CUSTOMER");
+                cust.setStatus("active");
+                userRepository.save(cust);
+                log.info("ÄĂ£ Ä‘á»“ng bá»™ láº¡i máº­t kháº©u BCrypt cho tĂ i khoáº£n khachhang@gmail.com");
+            }
+        }, () -> {
+            userRepository.save(User.builder()
+                    .fullName("Nguyá»…n VÄƒn A")
+                    .email("khachhang@gmail.com")
+                    .phone("0912345678")
+                    .passwordHash(passwordEncoder.encode("Customer@123"))
+                    .role("CUSTOMER")
+                    .loyaltyPoints(50)
+                    .memberTier("bronze")
+                    .status("active")
+                    .build());
+            log.info("ÄĂ£ táº¡o má»›i tĂ i khoáº£n khachhang@gmail.com");
+        });
+    }
+
+    private void seedReviewAndFavoriteData() {
+        if (reviewRepository.count() > 0 && favoriteRepository.count() > 0) {
+            return;
+        }
+
+        java.util.Optional<User> customerOpt = userRepository.findByEmail("khachhang@gmail.com");
+        if (customerOpt.isEmpty()) {
+            return;
+        }
+        User customer = customerOpt.get();
+
+        java.util.List<Movie> movies = movieRepository.findAll();
+        if (movies.isEmpty()) {
+            return;
+        }
+
+        Movie firstMovie = movies.get(0);
+
+        if (reviewRepository.count() == 0) {
+            reviewRepository.save(Review.builder()
+                    .user(customer)
+                    .movie(firstMovie)
+                    .rating(5)
+                    .comment("Phim rất hay, nội dung sâu sắc và dàn diễn viên xuất sắc!")
+                    .status("approved")
+                    .build());
+
+            if (movies.size() > 1) {
+                reviewRepository.save(Review.builder()
+                        .user(customer)
+                        .movie(movies.get(1))
+                        .rating(4)
+                        .comment("Hình ảnh và âm thanh hoành tráng, rất đáng xem tại rạp!")
+                        .status("approved")
+                        .build());
+            }
+            log.info("Khởi tạo đánh giá phim mẫu hoàn tất!");
+        }
+
+        if (favoriteRepository.count() == 0) {
+            favoriteRepository.save(Favorite.builder()
+                    .user(customer)
+                    .movie(firstMovie)
+                    .build());
+
+            if (movies.size() > 1) {
+                favoriteRepository.save(Favorite.builder()
+                        .user(customer)
+                        .movie(movies.get(1))
+                        .build());
+            }
+            log.info("Khởi tạo danh sách phim yêu thích mẫu hoàn tất!");
+        }
     }
 }

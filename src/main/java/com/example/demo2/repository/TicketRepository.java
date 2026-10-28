@@ -1,6 +1,7 @@
 package com.example.demo2.repository;
 
 import com.example.demo2.entity.Ticket;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -34,4 +35,16 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
            "  )" +
            "))")
     Set<String> findBookedSeatCodesByShowtimeId(@Param("showtimeId") Long showtimeId);
+
+    @Query("SELECT COUNT(t) FROM Ticket t WHERE t.booking IS NOT NULL AND t.booking.paymentStatus = 'paid'")
+    long countPaidTickets();
+
+    @Query("""
+        SELECT t.showtime.movie.id, t.showtime.movie.title, t.showtime.movie.posterUrl, COUNT(t), COALESCE(SUM(t.finalPrice), 0)
+        FROM Ticket t
+        WHERE t.booking IS NOT NULL AND t.booking.paymentStatus = 'paid'
+        GROUP BY t.showtime.movie.id, t.showtime.movie.title, t.showtime.movie.posterUrl
+        ORDER BY SUM(t.finalPrice) DESC
+    """)
+    List<Object[]> findTopSellingMovies(Pageable pageable);
 }

@@ -34,3 +34,6 @@ build/
 
 # MS Office temporary files
 ~$*
+
+# Uploaded files
+uploads/

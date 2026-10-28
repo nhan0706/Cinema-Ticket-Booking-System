@@ -10,6 +10,7 @@ import com.example.demo2.exception.BadRequestException;
 import com.example.demo2.exception.ResourceNotFoundException;
 import com.example.demo2.mapper.BookingMapper;
 import com.example.demo2.repository.*;
+import com.example.demo2.security.SecurityUtils;
 import com.example.demo2.service.BookingService;
 import com.example.demo2.service.CouponService;
 import com.example.demo2.service.TicketPriceRuleService;
@@ -65,11 +66,17 @@ public class BookingServiceImpl implements BookingService {
                     showtime.getId(), showtimeCinema.getName(), showtimeCinema.getId(), dto.getCinemaId()));
         }
 
-        User user = null;
-        if (dto.getUserId() != null) {
-            user = userRepository.findById(dto.getUserId())
-                    .orElseThrow(() -> new ResourceNotFoundException("User", "id", dto.getUserId()));
-        }
+        // Bắt buộc đăng nhập: lấy thông tin tài khoản từ SecurityContext
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        User user = userRepository.findById(currentUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("User", "id", currentUserId));
+
+        String contactEmail = (dto.getContactEmail() != null && !dto.getContactEmail().isBlank())
+                ? dto.getContactEmail().trim()
+                : user.getEmail();
+        String contactPhone = (dto.getContactPhone() != null && !dto.getContactPhone().isBlank())
+                ? dto.getContactPhone().trim()
+                : (user.getPhone() != null ? user.getPhone() : "");
 
         // 3. Chống gửi trùng ghế ngay trong cùng 1 request đặt vé (ví dụ: seatIds = [1, 1])
         Set<Long> uniqueCheck = new HashSet<>();
@@ -130,8 +137,8 @@ public class BookingServiceImpl implements BookingService {
                 .bookingCode(bookingCode)
                 .user(user)
                 .showtime(showtime)
-                .contactPhone(dto.getContactPhone().trim())
-                .contactEmail(dto.getContactEmail().trim())
+                .contactPhone(contactPhone)
+                .contactEmail(contactEmail)
                 .status("pending")
                 .paymentStatus("unpaid")
                 .paymentMethod(dto.getPaymentMethod() != null ? dto.getPaymentMethod().trim().toUpperCase() : "VNPAY")
@@ -213,7 +220,7 @@ public class BookingServiceImpl implements BookingService {
                     CouponApplyRequestDTO.builder()
                             .code(code)
                             .orderAmount(subtotal)
-                            .userId(user != null ? user.getId() : null)
+                            .userId(user.getId())
                             .build()
             );
 
@@ -247,7 +254,7 @@ public class BookingServiceImpl implements BookingService {
                 .note(String.format("Khởi tạo đơn đặt vé (%d ghế, tạm tính: %s VNĐ, giảm giá: %s VNĐ, tổng thanh toán: %s VNĐ). Thời hạn giữ ghế 5 phút (đến %s)",
                         selectedSeats.size(), subtotal.toPlainString(), discountAmount.toPlainString(),
                         totalAmount.toPlainString(), savedBooking.getHoldExpiresAt()))
-                .changedBy(user != null ? user.getEmail() : dto.getContactEmail())
+                .changedBy(user.getEmail())
                 .build());
 
         return BookingMapper.toResponseDTO(savedBooking, Collections.singletonList(initialHistory));
@@ -258,6 +265,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO getBookingById(Long id) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
+        SecurityUtils.checkBookingAccess(booking);
         List<BookingStatusHistory> history = historyRepository.findByBookingIdOrderByCreatedAtAsc(booking.getId());
         return BookingMapper.toResponseDTO(booking, history);
     }
@@ -267,6 +275,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO getBookingByCode(String bookingCode) {
         Booking booking = bookingRepository.findByBookingCode(bookingCode.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "bookingCode", bookingCode));
+        SecurityUtils.checkBookingAccess(booking);
         List<BookingStatusHistory> history = historyRepository.findByBookingIdOrderByCreatedAtAsc(booking.getId());
         return BookingMapper.toResponseDTO(booking, history);
     }
@@ -274,6 +283,11 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingResponseDTO> getAllBookings(Long userId, Long showtimeId, String status) {
+        if (!SecurityUtils.isStaffOrAdmin()) {
+            // Khách hàng (CUSTOMER) chỉ được xem đơn đặt vé của chính mình
+            userId = SecurityUtils.getCurrentUserId();
+        }
+
         List<Booking> bookings;
         if (userId != null) {
             bookings = bookingRepository.findByUserIdOrderByCreatedAtDesc(userId);
@@ -295,6 +309,7 @@ public class BookingServiceImpl implements BookingService {
     public BookingResponseDTO cancelBooking(Long id, BookingCancelRequestDTO dto) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", id));
+        SecurityUtils.checkBookingAccess(booking);
 
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
             throw new BadRequestException("Đơn đặt vé #" + booking.getBookingCode() + " đã ở trạng thái hủy từ trước");
@@ -321,9 +336,12 @@ public class BookingServiceImpl implements BookingService {
         String reason = dto != null && dto.getReason() != null && !dto.getReason().isBlank()
                 ? dto.getReason().trim()
                 : "Người dùng hủy đơn đặt vé";
-        String changedBy = dto != null && dto.getChangedBy() != null && !dto.getChangedBy().isBlank()
-                ? dto.getChangedBy().trim()
-                : "CUSTOMER";
+        String changedBy = SecurityUtils.findCurrentUser()
+                .map(u -> u.getEmail() + " (" + u.getRole() + ")")
+                .orElse("CUSTOMER");
+        if (dto != null && dto.getChangedBy() != null && !dto.getChangedBy().isBlank() && SecurityUtils.isStaffOrAdmin()) {
+            changedBy = dto.getChangedBy().trim();
+        }
 
         historyRepository.save(BookingStatusHistory.builder()
                 .booking(updated)
@@ -418,9 +436,9 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional(readOnly = true)
     public List<BookingStatusHistoryResponseDTO> getBookingStatusHistory(Long bookingId) {
-        if (!bookingRepository.existsById(bookingId)) {
-            throw new ResourceNotFoundException("Booking", "id", bookingId);
-        }
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+        SecurityUtils.checkBookingAccess(booking);
         return historyRepository.findByBookingIdOrderByCreatedAtAsc(bookingId)
                 .stream()
                 .map(BookingMapper::toHistoryDTO)

@@ -11,6 +11,8 @@ import com.example.demo2.exception.ResourceNotFoundException;
 import com.example.demo2.mapper.CouponMapper;
 import com.example.demo2.repository.BookingRepository;
 import com.example.demo2.repository.CouponRepository;
+import com.example.demo2.security.CustomUserDetails;
+import com.example.demo2.security.SecurityUtils;
 import com.example.demo2.service.CouponService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -128,9 +130,15 @@ public class CouponServiceImpl implements CouponService {
                     coupon.getMinOrderAmount().toPlainString(), code, orderAmount.toPlainString()));
         }
 
-        if (dto.getUserId() != null && coupon.getPerUserLimit() != null) {
+        // Lấy userId từ DTO hoặc từ SecurityContext của người đang đăng nhập
+        Long resolvedUserId = dto.getUserId();
+        if (resolvedUserId == null) {
+            resolvedUserId = SecurityUtils.findCurrentUser().map(CustomUserDetails::getId).orElse(null);
+        }
+
+        if (resolvedUserId != null && coupon.getPerUserLimit() != null) {
             long userUsed = bookingRepository.countByUserIdAndCouponIdAndStatusNot(
-                    dto.getUserId(), coupon.getId(), "cancelled");
+                    resolvedUserId, coupon.getId(), "cancelled");
             if (userUsed >= coupon.getPerUserLimit()) {
                 throw new BadRequestException("Bạn đã sử dụng hết số lượt cho phép của mã '" + code + "' (" + coupon.getPerUserLimit() + " lần/người)");
             }

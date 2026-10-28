@@ -7,6 +7,8 @@ import com.example.demo2.exception.BadRequestException;
 import com.example.demo2.exception.ResourceNotFoundException;
 import com.example.demo2.mapper.PaymentMapper;
 import com.example.demo2.repository.*;
+import com.example.demo2.security.SecurityUtils;
+import com.example.demo2.service.NotificationService;
 import com.example.demo2.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +46,7 @@ public class PaymentServiceImpl implements PaymentService {
     private final UserRepository userRepository;
     private final CouponRepository couponRepository;
     private final ZaloPayConfig zaloPayConfig;
+    private final NotificationService notificationService;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(15))
@@ -53,6 +56,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public PaymentAttemptResponseDTO processPayment(PaymentRequestDTO dto) {
         Booking booking = validateBookingPayable(dto.getBookingId());
+        SecurityUtils.checkBookingAccess(booking);
 
         String method = dto.getPaymentMethod().trim().toUpperCase();
         String txnId = "TXN-" + method + "-" + System.currentTimeMillis();
@@ -87,13 +91,13 @@ public class PaymentServiceImpl implements PaymentService {
         int pointsEarned = confirmBookingPayment(booking, method, txnId);
 
         PaymentAttempt successAttempt = paymentAttemptRepository.save(PaymentAttempt.builder()
-                .booking(booking)
-                .paymentMethod(method)
-                .transactionId(txnId)
-                .amount(booking.getTotalAmount())
-                .status("success")
-                .gatewayResponse("{\"resultCode\":0,\"message\":\"Giao dịch thành công\",\"transactionId\":\"" + txnId + "\"}")
-                .build());
+                    .booking(booking)
+                    .paymentMethod(method)
+                    .transactionId(txnId)
+                    .amount(booking.getTotalAmount())
+                    .status("success")
+                    .gatewayResponse("{\"resultCode\":0,\"message\":\"Giao dịch thành công\",\"transactionId\":\"" + txnId + "\"}")
+                    .build());
 
         return PaymentMapper.toPaymentDTO(successAttempt, pointsEarned);
     }
@@ -102,6 +106,7 @@ public class PaymentServiceImpl implements PaymentService {
     @Transactional
     public ZaloPayCreateOrderResponseDTO createZaloPayOrder(Long bookingId) {
         Booking booking = validateBookingPayable(bookingId);
+        SecurityUtils.checkBookingAccess(booking);
 
         // Định dạng app_trans_id bắt buộc của ZaloPay: yyMMdd_xxxx (Múi giờ Việt Nam GMT+7)
         String yyMMdd = LocalDate.now(ZoneId.of("Asia/Ho_Chi_Minh"))
@@ -461,15 +466,31 @@ public class PaymentServiceImpl implements PaymentService {
                 .changedBy("PAYMENT_GATEWAY")
                 .build());
 
+        if (user != null) {
+            try {
+                notificationService.sendNotification(
+                        user.getId(),
+                        "Đặt vé thành công: #" + booking.getBookingCode(),
+                        String.format("Đơn hàng #%s đã được thanh toán thành công qua %s (%s VNĐ). Chúc bạn xem phim vui vẻ!",
+                                booking.getBookingCode(), method, booking.getTotalAmount().toPlainString()),
+                        "booking",
+                        "in_app"
+                );
+            } catch (Exception ex) {
+                log.warn("Không thể gửi thông báo đặt vé thành công cho user {}: {}", user.getId(), ex.getMessage());
+            }
+        }
+
         return pointsEarned;
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<PaymentAttemptResponseDTO> getPaymentAttemptsByBooking(Long bookingId) {
-        if (!bookingRepository.existsById(bookingId)) {
-            throw new ResourceNotFoundException("Booking", "id", bookingId);
-        }
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+        SecurityUtils.checkBookingAccess(booking);
+
         return paymentAttemptRepository.findByBookingIdOrderByCreatedAtDesc(bookingId)
                 .stream()
                 .map(pa -> PaymentMapper.toPaymentDTO(pa, 0))
@@ -481,6 +502,7 @@ public class PaymentServiceImpl implements PaymentService {
     public RefundResponseDTO requestRefund(RefundRequestDTO dto) {
         Booking booking = bookingRepository.findById(dto.getBookingId())
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", dto.getBookingId()));
+        SecurityUtils.checkBookingAccess(booking);
 
         if (!"paid".equalsIgnoreCase(booking.getPaymentStatus())) {
             throw new BadRequestException("Chỉ có thể yêu cầu hoàn tiền cho đơn đặt vé đã thanh toán (paymentStatus hiện tại: " + booking.getPaymentStatus() + ")");
@@ -508,12 +530,16 @@ public class PaymentServiceImpl implements PaymentService {
                 .requestedAt(LocalDateTime.now())
                 .build());
 
+        String changedBy = SecurityUtils.findCurrentUser()
+                .map(u -> u.getEmail())
+                .orElse("CUSTOMER");
+
         historyRepository.save(BookingStatusHistory.builder()
                 .booking(booking)
                 .oldStatus(booking.getStatus())
                 .newStatus(booking.getStatus())
                 .note("Khách hàng gửi yêu cầu hoàn tiền (" + refundAmount.toPlainString() + " VNĐ): " + dto.getReason())
-                .changedBy("CUSTOMER")
+                .changedBy(changedBy)
                 .build());
 
         return PaymentMapper.toRefundDTO(refund);
@@ -530,7 +556,8 @@ public class PaymentServiceImpl implements PaymentService {
         }
 
         Booking booking = refund.getBooking();
-        refund.setApprovedBy(dto.getApprovedBy() != null ? dto.getApprovedBy() : 1L);
+        Long adminId = SecurityUtils.getCurrentUserId();
+        refund.setApprovedBy(adminId);
         refund.setProcessedAt(LocalDateTime.now());
 
         if (Boolean.TRUE.equals(dto.getApprove())) {
@@ -576,6 +603,21 @@ public class PaymentServiceImpl implements PaymentService {
                 }
             }
 
+            if (booking.getUser() != null) {
+                try {
+                    notificationService.sendNotification(
+                            booking.getUser().getId(),
+                            "Hoàn tiền thành công: #" + booking.getBookingCode(),
+                            String.format("Yêu cầu hoàn tiền %s VNĐ cho đơn vé #%s đã được xử lý hoàn tất.",
+                                    refund.getRefundAmount().toPlainString(), booking.getBookingCode()),
+                            "refund",
+                            "in_app"
+                    );
+                } catch (Exception ex) {
+                    log.warn("Không thể gửi thông báo hoàn tiền cho user {}: {}", booking.getUser().getId(), ex.getMessage());
+                }
+            }
+
             historyRepository.save(BookingStatusHistory.builder()
                     .booking(booking)
                     .oldStatus(oldStatus)
@@ -583,7 +625,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .note(String.format("Đã phê duyệt hoàn tiền %s VNĐ (Mã GD hoàn: %s) & giải phóng ghế. Ghi chú: %s",
                             refund.getRefundAmount().toPlainString(), refundTxnId,
                             dto.getNote() != null ? dto.getNote() : "Hoàn tiền hợp lệ"))
-                    .changedBy("ADMIN#" + refund.getApprovedBy())
+                    .changedBy("ADMIN#" + adminId)
                     .build());
         } else {
             refund.setStatus("rejected");
@@ -593,7 +635,7 @@ public class PaymentServiceImpl implements PaymentService {
                     .oldStatus(booking.getStatus())
                     .newStatus(booking.getStatus())
                     .note("Từ chối yêu cầu hoàn tiền #" + refundId + ". Lý do: " + (dto.getNote() != null ? dto.getNote() : "Không đủ điều kiện hoàn vé"))
-                    .changedBy("ADMIN#" + refund.getApprovedBy())
+                    .changedBy("ADMIN#" + adminId)
                     .build());
         }
 
@@ -613,9 +655,10 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public List<RefundResponseDTO> getRefundsByBooking(Long bookingId) {
-        if (!bookingRepository.existsById(bookingId)) {
-            throw new ResourceNotFoundException("Booking", "id", bookingId);
-        }
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking", "id", bookingId));
+        SecurityUtils.checkBookingAccess(booking);
+
         return refundRepository.findByBookingIdOrderByCreatedAtDesc(bookingId)
                 .stream()
                 .map(PaymentMapper::toRefundDTO)
@@ -625,6 +668,8 @@ public class PaymentServiceImpl implements PaymentService {
     @Override
     @Transactional(readOnly = true)
     public List<LoyaltyTransactionResponseDTO> getLoyaltyTransactionsByUser(Long userId) {
+        SecurityUtils.checkSelfOrStaff(userId);
+
         if (!userRepository.existsById(userId)) {
             throw new ResourceNotFoundException("User", "id", userId);
         }
@@ -694,7 +739,7 @@ public class PaymentServiceImpl implements PaymentService {
         sb.append("<style>body{font-family:Segoe UI,Arial,sans-serif;background:#0f172a;color:#f8fafc;display:flex;justify-content:center;padding:40px;}");
         sb.append(".card{background:#1e293b;border-radius:16px;padding:32px;max-width:650px;width:100%;box-shadow:0 10px 30px rgba(0,0,0,0.5);border:1px solid #334155;}");
         sb.append(".badge{display:inline-block;padding:8px 16px;border-radius:999px;font-weight:bold;margin-bottom:16px;background:")
-          .append(success ? "#16a34a" : "#dc2626").append(";color:#fff;}");
+                .append(success ? "#16a34a" : "#dc2626").append(";color:#fff;}");
         sb.append(".tickets{display:flex;flex-wrap:wrap;gap:16px;margin-top:20px;}");
         sb.append(".ticket{background:#0f172a;padding:16px;border-radius:12px;border:1px dashed #38bdf8;text-align:center;}");
         sb.append("a.btn{display:inline-block;margin-top:24px;padding:10px 20px;background:#2563eb;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;}");
